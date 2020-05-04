@@ -3,37 +3,25 @@ Blu-Bank(server) / ATM(client) code
 
 By CreeperGoBoom]]
 
+local tArgs = {...}
+
+
+--Allows installation through running "Blu-Bank <type>" in shell
+if tArgs[1] == "Bank" then
+
+elseif tArgs[1] == "ATM" then
+
+elseif tArgs[1] == "Store" then
+
+end
+
 --VARS
 local version = "V1.0"
 local range = 2
 local newAccAmount = 10000  --How much to start players off with on their first use
-local currency= { --ensure each item is in it's own table to ensure correct order of dispensing at highest level first (like an ATM giving you $100 or $50 notes for example)
---current exchange rates based mostly on projecte rates, tweaked for fairness
-{["minecraft:emerald_block"] = 147456},
-{["minecraft:diamond_block"] = 73728},
-{["minecraft:emerald"] = 16384},
-{["minecraft:gold_block"] = 18432},
-{["minecraft:diamond"] = 8192},
-{["minecraft:iron_block"] = 2304},
-{["minecraft:gold_ingot"] = 2048},
-{["minecraft:iron_ingot"] = 256},
-{["minecraft:redstone"] = 128},
-{["minecraft:coal"] = 64},
-{["minecraft:cobblestone"] = 1},
-}
-
-local function currencyLookupSimple()
-  local output = {}
-  for count, t in pairs(currency) do
-    for itemName,cost in pairs(t) do
-      output[itemName] = cost
-    end
-  end
-  return output
-end
-
-local simpleCurrency = currencyLookupSimple()
---returns an unordered currency list and allows things like if simpleCurrency[name] == cost then
+local currency= {}
+local exchangeWindow
+local greetingWindow
 
 local blacklistNames= {
   "Creeper",
@@ -213,7 +201,7 @@ for _ , func in pairs(requiredAPIFuncs) do
   end
 end
 
-local pcTypes = {"Bank","ATM"}
+local pcTypes = {"Bank","ATM","Store"}
 --Now check to see what this is (Bank or ATM)
 local function pcTypeCheck()
   local output=nil
@@ -291,7 +279,7 @@ if not ok then --For new configurations
   end
 end
 
-if pcType == "ATM" then
+if pcType ~= "Bank" then
   rs.setOutput("bottom",true)
 end
 
@@ -307,27 +295,67 @@ local function resetTerm()
   if commands ~= nil and pcType == "Bank" then
     print("Blu-Bank OS " .. version .. " Bank")
     print("Command Bank server active!")
+    shell.run("bg")
   elseif not commands then
     print("Blu-Bank OS " .. version .. " " .. pcType)
     if pcType == "Bank" then
       print("Bank server active!")
+      shell.run("bg")
     else
       print("Accessing bank server...")
     end
   end
 end
 
+local function listPeripheralsByName(...)
+  local temp = {}
+  local temp2 = {}
+  local count = 1
+  local peripherals = peripheral.getNames()
+  for k , v in pairs({...}) do
+    for _ , name in pairs(peripherals) do
+      if name:find(v) then
+        table.insert(temp,name)
+      end
+    end
+  end
+  return temp
+end
+
+local function alignText(tableScreen, stringText, stringAlignTo, boolLastLine)
+  --prints on previous line. Allows things like !item        cost!
+  local boolLastLine = boolLastLine or false
+  local screen = tableScreen
+  local x,y = screen.getSize()
+  local stringLength = stringText:len()
+  local midpoint = ((x / 2) - (stringLength / 2))+1
+  local right = (x - stringLength) + 1
+  local cursorPosX, cursorPosY = screen.getCursorPos()
+  if stringLastLine then
+    cursorPosY = cursorPosY - 1
+  end
+  if stringAlignTo == "left" then
+    screen.setCursorPos(cursorPosX,cursorPosY)  
+  elseif stringAlignTo == "center" then
+    screen.setCursorPos(midpoint,cursorPosY)
+  elseif stringAlignTo == "right" then
+    screen.setCursorPos(right,cursorPosY)
+  else
+    error("alignText: Bad argument #3: expected left, center or right!")
+  end
+  screen.write(stringText)
+end
+
+
 local sign
 local chest
 local trash
 local sensor=nil
 local config = {}
-if pcType == "ATM" then --no point trying to wrap a sensor for bank server.
+if pcType ~= "Bank" then --no point trying to wrap a sensor for bank server.
   sensor = peripheral.find("plethora:sensor")
   if not sensor then
     error("Error: Sensor not found. The ATM requires a sensor turtle with wireless modem to function")
-  -- elseif sensor then
-    -- config["sensor"]=cgb.findPeripheralOnSide("plethora:sensor")
   end
   if not fs.exists("data/blubank/config.lua") then
     --Chests
@@ -441,11 +469,10 @@ if pcType == "ATM" then --no point trying to wrap a sensor for bank server.
       monitor.clear()
       monitor.setCursorPos(1,1)
       monitor.write("Blu-bank OS")
-      cmonitor = peripheral.wrap(config.currency_monitor)
-      --sensor = peripheral.wrap(config.sensor)
+      --cmonitor = peripheral.wrap(config.currency_monitor)
       chest = peripheral.wrap(config.chest)
       trash = peripheral.wrap(config.trash)
-      sign = peripheral.wrap(config.sign_monitor) 
+      --sign = peripheral.wrap(config.sign_monitor) 
     elseif id == expired then
       print("Bank server not responding! auto restarting in:")
       for i = 5,1,-1 do
@@ -455,7 +482,65 @@ if pcType == "ATM" then --no point trying to wrap a sensor for bank server.
       os.reboot()
     end
   end
-end 
+elseif pcType == "Bank" and commands and not fs.exists("data/blubank/currency.lua") then --new bank server, need to configure item list
+  local storage = listPeripheralsByName("chest","shulker")
+  if not storage[1] then --at least one chest is needed
+    repeat
+      print("Chests / shulkers: " .. #storage)
+      print("A chest or shulker is required for configuration of server. (Exchange and Withdrawal items). Press any key when you have connected a chest or shulker.")
+      os.pullEvent("key")
+      storage = listPeripheralsByName("chest","shulker")
+      if not storage[1] then
+        print("Chest or shulker not yet found, Please make sure they are networked and the modem is 'connected'.")
+      end
+    until storage[1]
+  end
+  print("Please now insert the items you wish to use in order from most expensive to least expensive and press any key.")
+  print("note: You can simply add additional exchange items by placing them after your cheapest item (ensure that the first additional item is worth more than your cheapest item otherwise they will be considered withdrawal items also)")
+  os.pullEvent("key")
+  local n = 0
+  local data = {}
+  for slot,_ in pairs(peripheral.call(storage[1],"list")) do
+    n=n+1
+    dataRaw = peripheral.call(storage[1],"getItemMeta",slot) 
+    data={ --Let's trim down the saved data a little, do not need maxDamage etc
+    ["displayName"] = dataRaw.displayName,
+    ["name"] = dataRaw.name,
+    ["rawName"] = dataRaw.rawName,
+    ["maxCount"] = dataRaw.maxCount,
+    ["damage"] = dataRaw.damage
+    }
+    repeat
+      print("How many credits is '" .. dataRaw.displayName .."' worth?")
+      input = tonumber(io.read())
+      if not input then
+        print("Sorry! That's not a number. Please try again.")
+      end
+    until input
+    currency[n] ={["value"] = input, ["data"] = data} --ensures items are in an ordered table with all needed data to allow correct checking of funds against it for withdrawals. allows #currency use
+  end
+  n = 0
+  cgb.saveConfig("data/blubank/currency.lua",currency)
+  
+end
+
+--if pcType == "Bank" then
+  currency = cgb.loadConfig("data/blubank/currency.lua")
+--end
+
+local currencyLookupName = {}
+local function currencyLookupSimple()
+  local output = {}
+  for count= 1, #currency do
+    output[currency[count].data.name] = currency[count].value
+    --allows player to enter displayname instead of minecraft:etc
+    currencyLookupName[currency[count].data.displayName]=currency[count].data.name
+  end
+  return output
+end
+
+local simpleCurrency = currencyLookupSimple()
+--returns an unordered currency list and allows things like if simpleCurrency[name] == cost then
 
 local function updateCurrencyScreen()
   cmonitor.setBackgroundColor(colors.white)
@@ -467,18 +552,29 @@ local function updateCurrencyScreen()
   else
     cmonitor.setTextColor(colors.black)
   end
-  local ctxt
   cmonitor.write("Credit rates:")
   cmonitor.setCursorPos(1,2)
-  for count, t in pairs(currency) do
+  for count = 1, #currency do
     local line = count + 2
-    for itemname,cost in pairs(t) do
-      _, simpleName, simpleName2 = cgb.stringToVars(itemname)
-      if simpleName2 then
-        cmonitor.write(simpleName .. " " .. simpleName2 .. ": " ..cost)
-      elseif not simpleName2 then
-        cmonitor.write(simpleName .. ": " ..cost)
-      end
+    local dispName = currency[count].data.displayName
+    local cost = currency[count].value
+    --Make cost have nice thousands seperator on screen
+    local hundreds = cost % 1000
+    hundreds = tostring(hundreds)
+    local thousands,_ = math.floor(cost / 1000) --Calculate thousands and drop fraction.
+    if hundreds:len() < 3 and tonumber(thousands) > 0 then --only add 0s to hundreds if there are thousands and there are less than 3 digits in hundreds
+      repeat 
+        hundreds = "0" .. hundreds
+      until hundreds:len() == 3
+    end
+    if thousands == 0 then
+      alignText(cmonitor,dispName .. ":","left")
+      alignText(cmonitor,hundreds,"right",true)
+      --cmonitor.write(dispName .. ": ".. hundreds)
+    else
+      alignText(cmonitor,dispName .. ":","left")
+      alignText(cmonitor,thousands .. "," .. hundreds,"right")
+      --cmonitor.write(dispName .. ": " .. thousands .. "," .. hundreds)
     end
     cmonitor.setCursorPos(1,line)
   end
@@ -496,10 +592,10 @@ local function updateMonitor(stringNewMsg,colorName)
   end
   monitor.setTextScale(2)
   monitor.clear()
-  monitor.setCursorPos(13,1)
-  monitor.write("Blu-Bank OS")
-  monitor.setCursorPos(8,2)
-  monitor.write(stringNewMsg)
+  monitor.setCursorPos(1,1)
+  alignText(monitor,"Blu-Bank " .. pcType,"center")
+  monitor.setCursorPos(1,2)
+  alignText(monitor,stringNewMsg,"center")
 end
 
 local function buildingSign()
@@ -563,7 +659,6 @@ local function getPlayerInRange()
 end
 
 
-local cash = {}
 local event
 local function secondary()
   local messagedata = {}
@@ -600,25 +695,41 @@ local function secondary()
           commands.say("Unauthorized access attempt...CC HACKER ALERT!")
         end
       end
-      --"purchase playername item cost quantity"
-      if message:find("purchase") then
-        -- authenticate("Purchase")
+      --"exchange playername item cost quantity"
+      if message:find("exchange") then
+        -- authenticate("exchange")
         -- event, senderID, message, protocol = os.pullEvent("rednet_message")
-        -- if message == "Purchase Authorized" then
+        -- if message == "exchange Authorized" then
           print(message)
           _, player, item, credcost, qty = cgb.stringToVarsAll(message)
-          -- for i in string.gmatch(message, "%S+") do
-          -- print(i)
-          -- end
-          --for some reason item is coming back as nil
-          print(player .. " requested to purchase " .. qty .. " " .. item)
+          print(player .. " requested to exchange " .. qty .. " " .. item)
           local cost = tonumber(credcost) * qty
           funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
           if cost <= funds.balance then
-            rednet.send(senderID, "purchase-success")
+            rednet.send(senderID, "exchange-success")
             funds.balance = funds.balance - cost
             cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
-            commands.give(player.." " .. item .. " " .. qty)
+            --Check item maxcount and give accordingly
+            --avoids no give bug if qty higher than maxcount
+            for i = 1,#currency do
+              --check that the cost is also correct
+              if item == currency[i].data.name and tonumber(credcost) == currency[i].value then
+                maxCount = currency[i].data.maxCount
+                damage = currency[i].data.damage
+                --/\ ensures that the correct item is given, Eg, 'computercraft:peripheral' is Disk Drive, where as 'computercraft:peripheral 1 4' is 1 Advanced monitor
+                break
+              end
+            end
+            qty = tonumber(qty)
+            if qty > maxCount then 
+              repeat
+                commands.give(player .. " " .. item .. " " .. maxCount .. " " .. damage)
+                qty = qty - maxCount
+              until qty <= maxCount
+              commands.give(player .. " " .. item .. " " .. qty .. " " .. damage) 
+            elseif qty <= maxCount then
+              commands.give(player .. " " .. item .. " " .. qty .. " " .. damage)
+            end
           elseif cost > funds.balance then
             rednet.send(senderID,"insufficient funds This item costs " .. cost .. " credits and you have " .. funds.balance .. " credits!")
           end
@@ -636,7 +747,6 @@ local function secondary()
           withdrawalRequest = tonumber(amount)
           if withdrawalRequest <= funds.balance then
             rednet.send(senderID,"withdrawal-success")
-            commands.say(player .. " requested a withdrawal")
             if funds.balance == withdrawalRequest then
               funds.balance = 0 
             elseif funds.balance > withdrawalRequest then
@@ -645,23 +755,25 @@ local function secondary()
             print("Remaining: " .. funds.balance)
             cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
             --calculate how many of each item to give
-            for i,tablevar in pairs(currency) do
-              for itemName,cost in pairs(tablevar) do
-                cash[itemName]={}
-                qty,fraction=math.modf(withdrawalRequest / cost) --how many items can be given at this cost?
-                --item has been calculated. give item
-                --This avoids give not happening due to qty higher than 64 bug
-                if qty > 64 then 
-                  repeat
-                    commands.give(player .. " " .. itemName .. " " .. 64)
-                    qty = qty - 64
-                  until qty <= 64
-                  commands.give(player .. " " .. itemName .. " " .. qty) 
-                elseif qty <= 64 then
-                  commands.give(player .. " " .. itemName .. " " .. qty)
-                end
-                withdrawalRequest = fraction * cost --How many credits remain after item count?
+            for count = 1, #currency do
+              itemName = currency[count].data.name
+              cost = currency[count].value
+              maxCount = currency[count].data.maxCount
+              damage = currency[count].data.damage
+              --/\ ensures that the correct item is given, Eg, 'computercraft:peripheral' is Disk Drive, where as 'computercraft:peripheral 1 4' is 1 Advanced monitor
+              qty,fraction=math.modf(withdrawalRequest / cost) --how many items can be given at this cost?
+              --item has been calculated. give item
+              --This avoids give not happening due to qty higher than maxcount bug
+              if qty > maxCount then 
+                repeat
+                  commands.give(player .. " " .. itemName .. " " .. maxCount .. " " .. damage)
+                  qty = qty - maxCount
+                until qty <= maxCount
+                commands.give(player .. " " .. itemName .. " " .. qty .. " " .. damage) 
+              elseif qty <= maxCount then
+                commands.give(player .. " " .. itemName .. " " .. qty .. " " .. damage)
               end
+              withdrawalRequest = fraction * cost --How many credits remain after item count?
             end
             --make sure remaining unwithdrawable credits get refunded
             funds.balance = funds.balance + withdrawalRequest
@@ -741,17 +853,66 @@ local function secondary()
   end
 end
 
+--No matter how long the number is, thousand seperators will be accurately added.  
+local function stringNumberToThousands(inputString)
+  local numcheck = tonumber(inputString)
+  --Check if input converts to a number
+  if (type(inputString)=="nil") or (not numcheck) then
+    error("stringNumberToThousands: Input not a number or number string. Got: '" .. (inputString or "nil") .. "'.",2)
+  end
+  --Convert if number
+  if type(inputString) == "number" then
+    inputString = tostring(inputString)
+  end
+  local output = ""
+  --Check if thousands seperator can be added, no point continuing if not
+  if inputString:len() <=3 then
+    output = inputString
+    return output
+  end
+  --Get every digit of stringInput and save to table
+  local reconstruct = {}
+  for s in string.gmatch(inputString,"%d") do
+    table.insert(reconstruct,s)
+  end
+  local n = 0
+  --Reconstruct number string with thousands seperator(s)
+  for i = inputString:len(),1,-1 do
+    n= n+1
+    --String is reconstructed from back to front
+    output = reconstruct[i] .. output
+    --Adds a seperator every 3 chars only if there has been 3 chars since last seperator and there are more chars after a new seperator
+    if i ~= 1 and n == 3 then
+      output = "," .. output
+      n = 0
+    elseif i == 1 and n == 3 then
+      break
+    end
+  end
+  return output
+end
 
+local outputString = ""
 local player = "nil"
 local playercheck
 local playermem
 local function main()
   while true do
-    if pcType == "ATM" then
-      buildingSign()
-      updateMonitor(" ")
+    if pcType == "ATM" or pcType == "Store" then
+      --buildingSign()
+      -- monitor.setTextScale(2)
+      -- local maxSizeX,maxSizeY = monitor.getSize()
+      -- exchangeWindow = window.create(monitor,1,1,maxSizeX / 2, maxSizeY * 0.9)
+      -- exchangeWindow.setBackgroundColor(colors.red)
+      -- exchangeWindow.clear()
+      -- greetingWindow = window.create(monitor,1,maxSizeY * 0.9,maxSizeX,maxSizeY * 0.2)
+      -- greetingWindow.setBackgroundColor(colors.blue)
+      -- greetingWindow.setTextColor(colors.white)
+      -- greetingWindow.clear()
+      -- alignText(greetingWindow,"Hello player","center")
+      updateMonitor("Awaiting Player approach...")
       resetTerm()
-      
+      currencyLookupSimple() --updates the 
       repeat
         ok,player = getPlayerInRange()
         if not ok then
@@ -761,7 +922,7 @@ local function main()
       rs.setOutput("bottom",false)
       playermem = player
       updateMonitor("WELCOME " .. player .. "!")
-      updateCurrencyScreen()
+      --updateCurrencyScreen()
       print("Welcome " .. player .. "!")
       rednet.send(config.bankId, "balance " .. player)
       --"bal balance"
@@ -769,11 +930,24 @@ local function main()
         event,senderID,message = os.pullEvent("rednet_message")
       until message:find("bal")
       _, bal= cgb.stringToVars(message)
-      print("Your balance: " ..bal .. " credits.")
-      print("Press W for Withdrawal")
-      print("Press D for Deposit")
-      print("Press T to Transfer credits")
-      print("Press E for the Credit Exchange Store")
+      outputString = stringNumberToThousands(bal)
+      print("Your balance: " .. outputString .. " credits.")
+      if pcType == "ATM" then
+        print("Press W for Withdrawal")
+      end
+      if pcType == "ATM" then
+        print("Press D for Deposit")
+      elseif pcType == "Store" then
+        print("Press S to Sell")
+      end
+      if pcType == "ATM" then
+        print("Press T to Transfer credits")
+      end
+      if pcType == "ATM" then
+        print("Press E for the Credit Exchange Store")
+      elseif pcType == "Store" then
+        print("Press B for the Store")
+      end
       print("Press L to Logoff")
       repeat
         event,c = os.pullEvent("char")
@@ -783,8 +957,8 @@ local function main()
         print("Logged off! Thanks for using Blu-Bank! See you soon!")
         print("Please step away from the ATM.")
         updateMonitor("Farewell Tenant!")
-        cmonitor.setBackgroundColor(colors.black)
-        cmonitor.clear()
+        --cmonitor.setBackgroundColor(colors.black)
+        --cmonitor.clear()
         
         repeat
           ok,player = getPlayerInRange()
@@ -815,31 +989,46 @@ local function main()
           print("Insufficient funds! " .. replyString)
           sleep(3)
         end
-      elseif c == "d" then --Deposit
+      elseif c == "d" or c == "s" then --Deposit or sell
         local itemvalue
         local total=0
-        print("Take a look at the credit rates and place your deposit in the chest.")
+        local stringVar1 = ""
+        local stringVar2 = ""
+        if pcType == "ATM" then
+          stringVar1 = "credit rates"
+          stringVar2 = "place your deposit in"
+        elseif pcType == "Store" then
+          stringVar1 = "buy list"
+          stringVar2 = "insert the items you want to sell into"
+        end
+        print("Take a look at the " .. stringVar1 .. " and " .. stringVar2 .. " the chest.")
         print("Press any key when you are ready to continue.")
         os.pullEvent("key")
         print("Processing, please wait.")
         for slot,item in pairs(chest.list()) do
-          --if item not listed in currency, do not move
+          --only move item if listed in currency
           if simpleCurrency[item.name] then
             chest.pushItems(config.trash,slot,item.count)
             total = total + (item.count * simpleCurrency[item.name])
           end
         end
         if total == 0 then
-          print("Nothing inserted or items do not match list. please check your deposit items and try again.")
+          print("Nothing inserted or items do not match list. please check your items and try again.")
           sleep(3)
         else
-          print("You have inserted " .. total .. " credits")
-          print("Are you happy to finalize your deposit? Y or N")
+          print("You have inserted " .. stringNumberToThousands(total) .. " credits")
+          local stringVar = ""
+          if pcType == "ATM" then 
+            stringVar = "deposit"
+          elseif pcType == "Store" then
+            stringVar = "sale"
+          end
+          print("Are you happy to finalize your " .. stringVar .. "? Y or N")
           repeat  
             event,c = os.pullEvent("char")
           until c == "y" or c == "n"
           if c == "n" then
-            print("Returning your deposit")
+            print("Returning your " .. stringVar .. " items.")
             for slot,item in pairs(trash.list()) do
               trash.pushItems(config.chest,slot,item.count)
             end
@@ -852,15 +1041,11 @@ local function main()
               for slot,_ in pairs(trash.list()) do
                 trash.drop(slot)
               end
-              print("Deposit of " .. total .. " credits success!")
+              print("Deposit of " .. stringNumberToThousands(total) .. " credits success!")
               sleep(3)
             end
-            --deposit code
           end
         end
-        -- elseif message == "deposit-success" then
-          -- print("Deposit Successful!")
-          -- sleep(3)
       elseif c == "t" then --Transfer
         print("Transfers are performed as following:")
         print("toPlayerName amount")
@@ -898,30 +1083,68 @@ local function main()
         term.clear()
         term.setCursorPos(1,1)
         print("Credit Exchange Store")
-        print("Your Balance: " .. bal .. " credits.")  
-        for count, t in pairs(currency) do
-          for itemName,cost in pairs(t) do
-            -- _, simpleName, simpleName2 = cgb.stringToVars(itemname)
-            -- if simpleName2 then
-              -- print(simpleName .. " " .. simpleName2 .. ": " ..cost)
-            -- elseif not simpleName2 then
-              -- print(simpleName .. ": " ..cost)
-            -- end
-            print("'" .. itemName .. "' = " .. cost)
+        print("Your Balance: " .. outputString .. " credits.")
+        for count = 1, #currency do
+          local line = count + 3
+          local dispName = currency[count].data.displayName
+          local cost = currency[count].value
+          --Make cost have nice thousands seperator on screen
+          local hundreds = cost % 1000
+          hundreds = tostring(hundreds)
+          local thousands,_ = math.floor(cost / 1000) --Calculate thousands and drop fraction.
+          if hundreds:len() < 3 and tonumber(thousands) > 0 then --only add 0s to hundreds if there are thousands and there are less than 3 digits in hundreds
+            repeat 
+              hundreds = "0" .. hundreds
+            until hundreds:len() == 3
           end
+          if thousands == 0 then
+            alignText(term,"'" .. dispName .. "':","left")
+            alignText(term,hundreds,"right",true)
+          else
+            alignText(term,"'" .. dispName .. "':","left")
+            alignText(term,thousands .. "," .. hundreds,"right",true)
+          end
+          term.setCursorPos(1,line)
         end
+        -- for count = 1,#currency do
+          -- itemName = currency[count].data.displayName
+          -- cost = currency[count].value
+          -- print("'" .. itemName .. "' = " .. cost)
+        -- end
         repeat
           print("Please enter as: item qty")
-          input = io.read()
-          item, qty = cgb.stringToVarsAll(input)
+          input =io.read()
+          local recInput = ""
+          local wordList = {}
+          --split the string into relevant items
+          for word in string.gmatch(input, "%a+") do
+            table.insert(wordList,word)
+          end
+          for n in string.gmatch(input,"%d+") do
+            qty = n
+          end
+          --Reconstruct recorded item name. This keeps it seperate from qty
+          recInput=wordList[1]
+          for i = 2 , #wordList do
+            recInput = recInput .. " " .. wordList[i]
+          end
+          --get raw item name from currency data
+          item = currencyLookupName[recInput]
           if not simpleCurrency[item] then
-            print("Please ensure you include the full name including minecraft: and your spelling is correct.")
+            print("Entry is case-senitive. Please ensure you have typed your item correctly. Got: '" .. input .. "'.")
+          end
+          --We already know that the raw item name is correct. Now to get the damage value. Check against raw name and display name just to be sure we have the correct damage value.
+          for i = 1 , #currency do
+            if currency[i].data.name == item and currency[i].data.displayName == recInput then
+              damage = currency[i].data.damage
+              break
+            end
           end
         until simpleCurrency[item]
-        rednet.send(config.bankId, "purchase " .. player .. " " .. item .. " " .. simpleCurrency[item] .. " " ..qty)
+        rednet.send(config.bankId, "exchange " .. player .. " " .. item .. " " .. simpleCurrency[item] .. " " .. qty .. " " .. damage)
         event,senderID,message = os.pullEvent("rednet_message")
-        if message == "purchase-success" then
-          print("Purchase successful, please check your inventory.")
+        if message == "exchange-success" then
+          print("Exchange successful, please check your inventory.")
           sleep(3)
         elseif message:find("insufficient") then
           local replyString = "" 
@@ -939,8 +1162,6 @@ local function main()
           sleep(5)
         end
       end
-      --term.clear()
-      --term.setCursorPos(1,1)
     elseif pcType == "Bank" then
       resetTerm()
       while true do
