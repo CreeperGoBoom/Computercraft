@@ -6,15 +6,6 @@ By CreeperGoBoom]]
 local tArgs = {...}
 
 
---Allows installation through running "Blu-Bank.lua <type>" in shell
-if tArgs[1] == "Bank" then
-
-elseif tArgs[1] == "ATM" then
-
-elseif tArgs[1] == "Store" then
-
-end
-
 --VARS
 local version = "V1.0"
 local range = 2
@@ -216,6 +207,15 @@ local function pcTypeCheck()
   end
 end
 
+--Allows installation through running "Blu-Bank.lua <type>" in shell
+if tArgs[1] == "Bank" then
+
+elseif tArgs[1] == "ATM" then
+
+elseif tArgs[1] == "Store" then
+
+end
+
 local modem = nil
 --New computer. creates a blank file as a type placeholder
 --Find modem, make sure it is wireless and open rednet.
@@ -244,37 +244,39 @@ if not modem then --Wireless modem not on sides, must be on network
 end
 
 local ok, pcType = pcTypeCheck()
-if not ok then --For new configurations
-  local nonexisting
-  local event = {}
-  pcType = cgb.getAnswerWithPrompts("What type of computer is this?",pcTypes)
-  cgb.fileWrite("data/blubank/" .. pcType .. ".type")  --Don't have to repeat this anywhere now
-  if pcType == "Bank" then
-    --Bank server selected. Ensure no other bank server active by pinging for server.
-    --Start a 3 second timer for if there is no answer to ping.
-    print("Reminder: This chunk must now remain loaded at all times to avoid problems with ATMs working. Press ENTER to continue.")
-    io.read()
-    print("Pinging for existing bank server...")
-    nonexisting = os.startTimer(3)
-    rednet.broadcast("Existing?","Blu-bank-SSL")
-    repeat 
-      event = {os.pullEvent()}
-    --Do all checks here.
-    until 
-      (event[1] == "rednet_message" and event[3] == "yes") 
-    or 
-      (event[1] == "timer" and event[2] == nonexisting)
-    --We have already checked for other event args in repeat until so no need to repeat them below.
-    if event[1] == "rednet_message" then
-      --Bank server already exists. Ensure that type remains unset.
-      print("There is already a Bank server active. Restarting!")
-      fs.delete("data/blubank/" .. pcType ..".type")
-      sleep(2)
-      os.reboot()
-    elseif event[1] == "timer" then
-      --No bank server exists or active
-      print("Other bank server not found. Bank server configured!")
-      sleep(2)
+local function configure()
+  if not ok then --For new configurations
+    local nonexisting
+    local event = {}
+    pcType = cgb.getAnswerWithPrompts("What type of computer is this?",pcTypes)
+    cgb.fileWrite("data/blubank/" .. pcType .. ".type")  --Don't have to repeat this anywhere now
+    if pcType == "Bank" then
+      --Bank server selected. Ensure no other bank server active by pinging for server.
+      --Start a 3 second timer for if there is no answer to ping.
+      print("Reminder: This chunk must now remain loaded at all times to avoid problems with ATMs working. Press ENTER to continue.")
+      io.read()
+      print("Pinging for existing bank server...")
+      nonexisting = os.startTimer(3)
+      rednet.broadcast("Existing?","Blu-bank-SSL")
+      repeat 
+        event = {os.pullEvent()}
+      --Do all checks here.
+      until 
+        (event[1] == "rednet_message" and event[3] == "yes") 
+      or 
+        (event[1] == "timer" and event[2] == nonexisting)
+      --We have already checked for other event args in repeat until so no need to repeat them below.
+      if event[1] == "rednet_message" then
+        --Bank server already exists. Ensure that type remains unset.
+        print("There is already a Bank server active. Restarting!")
+        fs.delete("data/blubank/" .. pcType ..".type")
+        sleep(2)
+        os.reboot()
+      elseif event[1] == "timer" then
+        --No bank server exists or active
+        print("Other bank server not found. Bank server configured!")
+        sleep(2)
+      end
     end
   end
 end
