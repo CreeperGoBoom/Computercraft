@@ -356,4 +356,17 @@ function funcs.stringToVarsAll(stringInput)
   return table.unpack(tableOutput)
 end
 
+function funcs.listPeripheralsByName(...)
+  local temp = {}
+  local peripherals = peripheral.getNames()
+  for k , v in pairs({...}) do
+    for _ , name in pairs(peripherals) do
+      if name:find(v) then
+        table.insert(temp,name)
+      end
+    end
+  end
+  return temp
+end
+
 return funcs
