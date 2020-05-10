@@ -356,6 +356,8 @@ function funcs.stringToVarsAll(stringInput)
   return table.unpack(tableOutput)
 end
 
+--Returns a table of all peripherals containing "x","y","z"
+--Allows for (storage = api.listPeripheralsByName("chest","shulker")
 function funcs.listPeripheralsByName(...)
   local temp = {}
   local peripherals = peripheral.getNames()
