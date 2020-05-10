@@ -207,15 +207,6 @@ local function pcTypeCheck()
   end
 end
 
---Allows installation through running "Blu-Bank.lua <type>" in shell
-if tArgs[1] == "Bank" then
-
-elseif tArgs[1] == "ATM" then
-
-elseif tArgs[1] == "Store" then
-
-end
-
 local modem = nil
 --New computer. creates a blank file as a type placeholder
 --Find modem, make sure it is wireless and open rednet.
@@ -244,7 +235,8 @@ if not modem then --Wireless modem not on sides, must be on network
 end
 
 local ok, pcType = pcTypeCheck()
-local function configure()
+local function configure(boolOverride)
+  boolOverride = boolOverride or false
   if not ok then --For new configurations
     local nonexisting
     local event = {}
@@ -281,7 +273,14 @@ local function configure()
   end
 end
 
-if pcType ~= "Bank" then
+if not pcType then configure() end
+
+local function mkFile(fileName)
+  f=fs.open(fileName)
+  f.close()
+end
+
+if pcType ~= "Bank" then --Stores and ATMs will have a redstone output
   rs.setOutput("bottom",true)
 end
 
@@ -311,8 +310,6 @@ end
 
 local function listPeripheralsByName(...)
   local temp = {}
-  local temp2 = {}
-  local count = 1
   local peripherals = peripheral.getNames()
   for k , v in pairs({...}) do
     for _ , name in pairs(peripherals) do
