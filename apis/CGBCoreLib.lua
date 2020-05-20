@@ -371,4 +371,75 @@ function funcs.listPeripheralsByName(...)
   return temp
 end
 
+--Creates a table with converted page data for 'x' screen, allows printing by page num using for i = 1,#table[page] do. 
+--Table must have 1, 2, 3, etc as keys
+--screen must be wrapped
+function funcs.tableToPageData(screen, tableData, optNumberLinestoExclude)
+  local pageData = {}
+  local optNumberLinestoExclude = optNumberLinestoExclude or 0
+  local screen = ( type(screen) == "string" and peripheral.wrap(screen) ) 
+    or ( type(screen) == "table" and screen )
+    or ( error("tableToPageData: Bad argument #1: Invalid screen.",2) )
+  _, screenSize = screen.getSize()
+  if not tableData[1] then
+    error("tableToPageData: Bad argument #2: Invalid table.",2)
+  elseif optNumberLinestoExclude > (screenSize - 1) then
+    error("tableToPageData: Bad argument #3: Number of lines to exclude too high. Entered: '" .. optNumberLinestoExclude .. "'. Cannot be higher than: '" .. (screenSize - 1) .. "' for selected screen.",2)
+  end
+  local linesPerPage = screenSize - optNumberLinestoExclude
+  local pageCount = math.ceil(#tableData / linesPerPage)
+  local processedLines = 0
+  for page = 1, pageCount do
+    table.insert(pageData,{})
+    for line = 1, linesPerPage do
+      processedLines = processedLines + 1
+      table.insert(pageData[page],tableData[processedLines])
+      --Finish up on last page
+      if processedLines == #tableData then
+        break
+      end
+    end
+  end
+  return pageData
+end
+
+function funcs.stringNumberToThousands(inputString)
+  local numcheck = tonumber(inputString)
+  --Check if input converts to a number
+  if (type(inputString)=="nil") or (not numcheck) then
+    error("stringNumberToThousands: Input not a number or number string. Got: '" .. (inputString or "nil") .. "'.",2)
+  end
+  --Convert if number
+  if type(inputString) == "number" then
+    inputString = tostring(inputString)
+  end
+  local output = ""
+  --Check if thousands seperator can be added, no point continuing if not
+  if inputString:len() <=3 then
+    output = inputString
+    return output
+  end
+  --Get every digit of stringInput and save to table
+  local reconstruct = {}
+  for s in string.gmatch(inputString,"%d") do
+    table.insert(reconstruct,s)
+  end
+  local n = 0
+  --Reconstruct number string with thousands seperator(s)
+  for i = inputString:len(),1,-1 do
+    n= n+1
+    --String is reconstructed from back to front
+    output = reconstruct[i] .. output
+    --Adds a seperator every 3 chars only if there has been 3 chars since last seperator and there are more chars after a new seperator
+    if i ~= 1 and n == 3 then
+      output = "," .. output
+      n = 0
+    elseif i == 1 and n == 3 then
+      break
+    end
+  end
+  return output
+end
+
+
 return funcs

@@ -245,10 +245,10 @@ local function configure(boolOverride)
     if pcType == "Bank" then
       --Bank server selected. Ensure no other bank server active by pinging for server.
       --Start a 3 second timer for if there is no answer to ping.
-      print("Reminder: This chunk must now remain loaded at all times to avoid problems with ATMs working. Press ENTER to continue.")
-      io.read()
+      print("Reminder: This chunk must now remain loaded at all times to avoid problems with ATMs working. Press any key to continue.")
+      os.pullEvent("key")
       print("Pinging for existing bank server...")
-      nonexisting = os.startTimer(3)
+      nonexisting = os.startTimer(1)
       rednet.broadcast("Existing?","Blu-bank-SSL")
       repeat 
         event = {os.pullEvent()}
@@ -481,7 +481,8 @@ if pcType ~= "Bank" then --no point trying to wrap a sensor for bank server.
       os.reboot()
     end
   end
-elseif pcType == "Bank" and commands and not fs.exists("data/blubank/currency.lua") then --new bank server, need to configure item list
+elseif (tArgs[1] == "currency-config") or 
+(pcType == "Bank" and commands and not fs.exists("data/blubank/currency.lua")) then --new bank server, need to configure item list
   local storage = listPeripheralsByName("chest","shulker")
   if not storage[1] then --at least one chest is needed
     repeat
@@ -891,13 +892,18 @@ local function stringNumberToThousands(inputString)
   return output
 end
 
+local function pressAnyKey()
+  print("Press any key to continue")
+  os.pullEvent("key")
+end
+
 local outputString = ""
 local player = "nil"
 local playercheck
 local playermem
 local function main()
   while true do
-    if pcType == "ATM" or pcType == "Store" then
+    if pcType == "ATM" --[[or pcType == "Store"]] then
       --buildingSign()
       -- monitor.setTextScale(2)
       -- local maxSizeX,maxSizeY = monitor.getSize()
@@ -972,7 +978,6 @@ local function main()
         event,senderID,message = os.pullEvent("rednet_message")
         if message == "withdrawal-success" then
           print("Success. Dispensing cash... please check your inventory :D")
-          sleep(3)
         elseif message:find("insufficient") then
           local replyString = "" 
           local insufficientFundsMessage = {}
@@ -986,8 +991,8 @@ local function main()
           end
           replyString = replyString .. "!"
           print("Insufficient funds! " .. replyString)
-          sleep(3)
         end
+        pressAnyKey()
       elseif c == "d" or c == "s" then --Deposit or sell
         local itemvalue
         local total=0
@@ -1001,8 +1006,7 @@ local function main()
           stringVar2 = "insert the items you want to sell into"
         end
         print("Take a look at the " .. stringVar1 .. " and " .. stringVar2 .. " the chest.")
-        print("Press any key when you are ready to continue.")
-        os.pullEvent("key")
+        pressAnyKey()
         print("Processing, please wait.")
         for slot,item in pairs(chest.list()) do
           --only move item if listed in currency
@@ -1013,7 +1017,6 @@ local function main()
         end
         if total == 0 then
           print("Nothing inserted or items do not match list. please check your items and try again.")
-          sleep(3)
         else
           print("You have inserted " .. stringNumberToThousands(total) .. " credits")
           local stringVar = ""
@@ -1031,7 +1034,6 @@ local function main()
             for slot,item in pairs(trash.list()) do
               trash.pushItems(config.chest,slot,item.count)
             end
-            sleep(2)
           elseif c == "y" then
             print("Sending deposit request...")
             rednet.send(config.bankId, "deposit " .. player .. " " .. total)
@@ -1041,10 +1043,10 @@ local function main()
                 trash.drop(slot)
               end
               print("Deposit of " .. stringNumberToThousands(total) .. " credits success!")
-              sleep(3)
             end
           end
         end
+        pressAnyKey()
       elseif c == "t" then --Transfer
         print("Transfers are performed as following:")
         print("toPlayerName amount")
@@ -1074,9 +1076,8 @@ local function main()
             end
             replyString = replyString .. "!"
             print("Insufficient funds! " .. replyString)
-            sleep(5)
           end
-          sleep(3)
+          pressAnyKey()
         end
       elseif c == "e" then --Credit Exchange Store
         term.clear()
@@ -1122,6 +1123,7 @@ local function main()
           for n in string.gmatch(input,"%d+") do
             qty = n
           end
+          if not qty then qty = 1 end
           --Reconstruct recorded item name. This keeps it seperate from qty
           recInput=wordList[1]
           for i = 2 , #wordList do
@@ -1144,7 +1146,6 @@ local function main()
         event,senderID,message = os.pullEvent("rednet_message")
         if message == "exchange-success" then
           print("Exchange successful, please check your inventory.")
-          sleep(3)
         elseif message:find("insufficient") then
           local replyString = "" 
           local insufficientFundsMessage = {}
@@ -1158,8 +1159,8 @@ local function main()
           end
           replyString = replyString .. "!"
           print("Insufficient funds! " .. replyString)
-          sleep(5)
         end
+        pressAnyKey()
       end
     elseif pcType == "Bank" then
       resetTerm()
