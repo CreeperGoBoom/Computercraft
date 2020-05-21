@@ -465,11 +465,10 @@ function funcs.getChestMeta(chest)
 end
 
 --Returms a wrap table or nil. Can throw error.
-function checkPeripheralExists(periph,stringIfToError)
+function checkPeripheralExists(periph,stringError)
   local periph = (type(periph) == "string" and peripheral.wrap(periph))
     or (type(periph) == "table" and periph)
     or (error(stringIfToError,2))
-    or (nil)
   return periph
 end
 
