@@ -381,7 +381,7 @@ function funcs.tableToPageData(screen, tableData, optNumberLinestoExclude)
     or ( type(screen) == "table" and screen )
     or ( error("tableToPageData: Bad argument #1: Invalid screen.",2) )
   _, screenSize = screen.getSize()
-  if not tableData[1] then
+  if (type(tableData) ~= "table") and (not (tableData and tableData[1])) then
     error("tableToPageData: Bad argument #2: Invalid table.",2)
   elseif optNumberLinestoExclude > (screenSize - 1) then
     error("tableToPageData: Bad argument #3: Number of lines to exclude too high. Entered: '" .. optNumberLinestoExclude .. "'. Cannot be higher than: '" .. (screenSize - 1) .. "' for selected screen.",2)
@@ -403,6 +403,8 @@ function funcs.tableToPageData(screen, tableData, optNumberLinestoExclude)
   return pageData
 end
 
+--Simply reconstructs a number or nuber string to include thousands seperators.
+--Reconstucted back to front for accuracy
 function funcs.stringNumberToThousands(inputString)
   local numcheck = tonumber(inputString)
   --Check if input converts to a number
@@ -439,6 +441,20 @@ function funcs.stringNumberToThousands(inputString)
     end
   end
   return output
+end
+
+
+--Returns complete data set for items contained in chest
+--chest can be string name or wrapped chest.
+function funcs.getChestMeta(chest)
+  chest = (type(chest) == "string" and peripheral.wrap(chest))
+    or (type(chest) == "table" and chest)
+    or (error("Invalid chest"))
+  local meta = {}
+  for slot, item in pairs(chest.list()) do
+    table.insert(meta,chest.getItemMeta(slot))
+  end
+  return meta
 end
 
 
