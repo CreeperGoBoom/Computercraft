@@ -1,6 +1,16 @@
 --CreeperGoBoom (CGB) Turtle Aware API
 --Requires CGBCoreLib require in main code as core
 
+Turtle = {
+settings = {
+  dirFacing = "",
+  x = 0,
+  y = 0,
+  z = 0,}, 
+
+
+}
+
 
 local directionFacing
 local north = 0
@@ -9,17 +19,23 @@ local east = 0
 local west = 0
 local directions = {}
 
-local function setStartingDirection(directionToSet)
+function Turtle:setStartingDirection(directionToSet)
   directionFacing = directionToSet
 end
 
-local function directionAdjuster(dir1,dir2) --only used by move
+function Turtle:directionAdjuster(dir1,dir2) --only used by move
   if dir1 > 0 then dir1 = dir1 - 1
   elseif dir2 => 0 then dir2 = dir2 + 1 end
   if dir1 < 0 then dir1 = 0 end --Because you cant be north-eastwest or east-northsouth of anything
   return dir1,dir2
 end
-  
+
+function Turtle:GPSSet(x,y,z)
+  local self.x, self.y, self.z = gps.locate() or core.loadConfig("data/gps.lua")
+  if not self.x then
+    print("GPS Tower not found or location not previously set. Please enter my exact block location")
+    {...}=
+  else 
 
 local function move(directionToMove,numSpacesToMove)
   if directionFacing == "north" then 
@@ -28,7 +44,7 @@ local function move(directionToMove,numSpacesToMove)
       directionFacing = "south"
       for i = 1,numSpacesToMove do 
         turtle.forward()
-        directions.north, directions.south = directionAdjuster(directions.north,directions.south)
+        directions.north, directions.south = self:directionAdjuster(directions.north,directions.south)
       end
     elseif directionToMove == "east" then
       turtle.turnRight()
