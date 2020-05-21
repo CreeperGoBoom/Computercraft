@@ -9,7 +9,7 @@ local doOnceNoColorWarning = {
 
 
 --Returms a wrap table. Throws error if non existing.
-function checkPeripheralExists(periph,stringError)
+function funcs.checkPeripheralExists(periph,stringError)
   local periph = (type(periph) == "string" and peripheral.wrap(periph))
     or (type(periph) == "table" and periph)
     or (error(stringIfToError,2))
