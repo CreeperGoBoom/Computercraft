@@ -141,8 +141,9 @@ function funcs.saveConfig(configFileName,data)
 end
 
 function funcs.tablePrint(tableVar)
-  if tableVar then local sData = textutils.serialize(tableVar)
-  print(sData)
+  if tableVar then 
+    local sData = textutils.serialize(tableVar)
+    print(sData)
   end
 end
 
@@ -230,6 +231,8 @@ function funcs.findPeripheralOnSide(stringPeripheral) --returns side. Ignores pe
   end
 end
 
+
+--This might be redundant
 function funcs.peripheralCall(stringName,stringMethod,...)  --An enhanced peripheral.call
   --Can check for name or side
   --Also checks network for peripheral
@@ -260,6 +263,7 @@ function funcs.tableInsert(tableVar,numOrStringKey,value)
   end
 end
 
+--Print in color if available else warn of no color.
 function funcs.colorPrint(stringColorName,string)
   if term.isColor() then
     if not pcall(term.setTextColour,colors[stringColorName]) then
@@ -278,6 +282,9 @@ function funcs.colorPrint(stringColorName,string)
   end
 end
 
+--Red printing. Very angry red bwahaha!
+--Avoids stop that error causes
+--Warns if no color available
 function funcs.errorPrint(string)
   if term.isColor() then
     term.setTextColour(colors.red)
@@ -449,7 +456,7 @@ end
 function funcs.getChestMeta(chest)
   chest = (type(chest) == "string" and peripheral.wrap(chest))
     or (type(chest) == "table" and chest)
-    or (error("Invalid chest"))
+    or (error("Invalid chest",2))
   local meta = {}
   for slot, item in pairs(chest.list()) do
     table.insert(meta,chest.getItemMeta(slot))
@@ -457,5 +464,13 @@ function funcs.getChestMeta(chest)
   return meta
 end
 
+--Returms a wrap table or nil. Can throw error.
+function checkPeripheralExists(periph,stringIfToError)
+  local periph = (type(periph) == "string" and peripheral.wrap(periph))
+    or (type(periph) == "table" and periph)
+    or (error(stringIfToError,2))
+    or (nil)
+  return periph
+end
 
 return funcs
