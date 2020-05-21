@@ -701,7 +701,7 @@ local function secondary()
         -- event, senderID, message, protocol = os.pullEvent("rednet_message")
         -- if message == "exchange Authorized" then
           print(message)
-          _, player, item, credcost, qty = cgb.stringToVarsAll(message)
+          _, player, item, credcost, qty, damage = cgb.stringToVarsAll(message)
           print(player .. " requested to exchange " .. qty .. " " .. item)
           local cost = tonumber(credcost) * qty
           funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
@@ -715,7 +715,7 @@ local function secondary()
               --check that the cost is also correct
               if item == currency[i].data.name and tonumber(credcost) == currency[i].value then
                 maxCount = currency[i].data.maxCount
-                damage = currency[i].data.damage
+                --damage = currency[i].data.damage
                 --/\ ensures that the correct item is given, Eg, 'computercraft:peripheral' is Disk Drive, where as 'computercraft:peripheral 1 4' is 1 Advanced monitor
                 break
               end
@@ -1084,27 +1084,18 @@ local function main()
         term.setCursorPos(1,1)
         print("Credit Exchange Store")
         print("Your Balance: " .. outputString .. " credits.")
-        for count = 1, #currency do
-          local line = count + 3
-          local dispName = currency[count].data.displayName
-          local cost = currency[count].value
-          --Make cost have nice thousands seperator on screen
-          local hundreds = cost % 1000
-          hundreds = tostring(hundreds)
-          local thousands,_ = math.floor(cost / 1000) --Calculate thousands and drop fraction.
-          if hundreds:len() < 3 and tonumber(thousands) > 0 then --only add 0s to hundreds if there are thousands and there are less than 3 digits in hundreds
-            repeat 
-              hundreds = "0" .. hundreds
-            until hundreds:len() == 3
-          end
-          if thousands == 0 then
+        local _, screenSize = term.getSize()
+        local pageData=cgb.tableToPageData(term,currency,2)
+        for page = 1, #pageData do
+          term.clear()
+          for line = 1, #pageData[page] do
+            term.setCursorPos(1,line)
+            local dispName = pageData[page][line].data.displayName
+            local cost = stringNumberToThousands(pageData[page][line].value)
             alignText(term,"'" .. dispName .. "':","left")
-            alignText(term,hundreds,"right",true)
-          else
-            alignText(term,"'" .. dispName .. "':","left")
-            alignText(term,thousands .. "," .. hundreds,"right",true)
+            alignText(term,cost,"right",true)
           end
-          term.setCursorPos(1,line)
+        pressAnyKey()
         end
         -- for count = 1,#currency do
           -- itemName = currency[count].data.displayName
@@ -1112,7 +1103,7 @@ local function main()
           -- print("'" .. itemName .. "' = " .. cost)
         -- end
         repeat
-          print("Please enter as: item qty")
+          print("Please enter as: item qty. Not case-sensitive.")
           input =io.read()
           local recInput = ""
           local wordList = {}
@@ -1129,14 +1120,20 @@ local function main()
           for i = 2 , #wordList do
             recInput = recInput .. " " .. wordList[i]
           end
+          --convert all basic names to lower
+          local currencyLookupNameLower = {}
+          for k,v in pairs(currencyLookupName) do
+            currencyLookupNameLower[k:lower()]=k
+          end
+          --check entered name against lower case. Removes case sensitivity
           --get raw item name from currency data
-          item = currencyLookupName[recInput]
+          item = currencyLookupName[currencyLookupNameLower[recInput:lower()]]
           if not simpleCurrency[item] then
-            print("Entry is case-senitive. Please ensure you have typed your item correctly. Got: '" .. input .. "'.")
+            print("Item does not exist. Please check your spelling. Note: Entry is not case-sensitive. Got: '" .. input .. "'.")
           end
           --We already know that the raw item name is correct. Now to get the damage value. Check against raw name and display name just to be sure we have the correct damage value.
           for i = 1 , #currency do
-            if currency[i].data.name == item and currency[i].data.displayName == recInput then
+            if currency[i].data.name == item and currency[i].data.displayName == currencyLookupNameLower[recInput:lower()] then
               damage = currency[i].data.damage
               break
             end
