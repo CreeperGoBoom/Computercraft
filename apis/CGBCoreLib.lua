@@ -8,6 +8,14 @@ local doOnceNoColorWarning = {
 }  -- For displaying a one time warning about no color capability
 
 
+--Returms a wrap table. Throws error if non existing.
+function checkPeripheralExists(periph,stringError)
+  local periph = (type(periph) == "string" and peripheral.wrap(periph))
+    or (type(periph) == "table" and periph)
+    or (error(stringIfToError,2))
+  return periph
+end
+
 --Writes data to a file, data can be anything except a function
 function funcs.fileWrite(stringFileName,data) 
   local file = fs.open(stringFileName, "w")
@@ -462,14 +470,6 @@ function funcs.getChestMeta(chest)
     table.insert(meta,chest.getItemMeta(slot))
   end
   return meta
-end
-
---Returms a wrap table or nil. Can throw error.
-function checkPeripheralExists(periph,stringError)
-  local periph = (type(periph) == "string" and peripheral.wrap(periph))
-    or (type(periph) == "table" and periph)
-    or (error(stringIfToError,2))
-  return periph
 end
 
 return funcs
