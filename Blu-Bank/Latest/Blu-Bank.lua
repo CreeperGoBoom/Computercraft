@@ -168,9 +168,9 @@ if not fs.exists("apis/CGBCoreLib.lua") then
   end
 end
 
-local cgb = require("apis/CGBCoreLib") --Contains complete function library used accross multiple programs and to minimize code size.
+require("apis/CGBCoreLib") --Contains complete function library used accross multiple programs and to minimize code size.
 
-cgb.saveConfig("data/keydata.lua",keys)
+CGBCoreLib:saveConfig("data/keydata.lua",keys)
 --For API check
 local requiredAPIFuncs = {
   "getAnswerWithPrompts",
@@ -183,7 +183,7 @@ local requiredAPIFuncs = {
 
 --Check API to ensure not outdated
 for _ , func in pairs(requiredAPIFuncs) do 
-  if not cgb[func] then
+  if not CGBCoreLib[func] then
     if not httpGet("https://pastebin.com/raw/xuMVS2GP", "apis/CGBCoreLib.lua") then
       error("Error: Your version of CGBCoreLib is outdated! Please connect your internet and restart!")
     else
@@ -220,7 +220,7 @@ for _,side in pairs(sides) do
   end
 end
 if not modem then --Wireless modem not on sides, must be on network
-  local modemList = cgb.getPeripherals("modem")
+  local modemList = CGBCoreLib:getPeripherals("modem")
   for _,v in pairs(modemList) do
     print(v)
     if peripheral.call(v,"isWireless") then
@@ -240,8 +240,8 @@ local function configure(boolOverride)
   if not ok then --For new configurations
     local nonexisting
     local event = {}
-    pcType = cgb.getAnswerWithPrompts("What type of computer is this?",pcTypes)
-    cgb.fileWrite("data/blubank/" .. pcType .. ".type")  --Don't have to repeat this anywhere now
+    pcType = CGBCoreLib:getAnswerWithPrompts("What type of computer is this?",pcTypes)
+    CGBCoreLib:fileWrite("data/blubank/" .. pcType .. ".type")  --Don't have to repeat this anywhere now
     if pcType == "Bank" then
       --Bank server selected. Ensure no other bank server active by pinging for server.
       --Start a 3 second timer for if there is no answer to ping.
@@ -446,10 +446,10 @@ if pcType ~= "Bank" then --no point trying to wrap a sensor for bank server.
     rednet.broadcast("bank id?","Blu-bank-SSL")
     event, id, message, protocol = os.pullEvent("rednet_message")
     config.bankId = tonumber(id)
-    cgb.saveConfig("data/blubank/config.lua",config)
+    CGBCoreLib:saveConfig("data/blubank/config.lua",config)
   else
     --Config exists... load all devices and settings
-    config = cgb.loadConfig("data/blubank/config.lua")
+    config = CGBCoreLib:loadConfig("data/blubank/config.lua")
     
     --This allows a bank to be moved to a new computer without any ATM config needed.
     --Will stop ATMs turning on if server is not working
@@ -520,12 +520,12 @@ elseif (tArgs[1] == "currency-config") or
     currency[n] ={["value"] = input, ["data"] = data} --ensures items are in an ordered table with all needed data to allow correct checking of funds against it for withdrawals. allows #currency use
   end
   n = 0
-  cgb.saveConfig("data/blubank/currency.lua",currency)
+  CGBCoreLib:saveConfig("data/blubank/currency.lua",currency)
   
 end
 
 --if pcType == "Bank" then
-  currency = cgb.loadConfig("data/blubank/currency.lua")
+  currency = CGBCoreLib:loadConfig("data/blubank/currency.lua")
 --end
 
 local currencyLookupName = {}
@@ -650,7 +650,7 @@ local function getPlayerInRange()
     sensordata[i].z < range and
     sensordata[i].y > -range and
     sensordata[i].y < range then
-      if not cgb.isInList(sensordata[i].name,blacklistNames) then
+      if not CGBCoreLib:isInList(sensordata[i].name,blacklistNames) then
         id = sensordata[i].name
         return true, id--ensures only one player is found at a time. also allows id to be discarded if not needed at the time.
       end
@@ -683,7 +683,7 @@ local function secondary()
       --limit commands to give only
         if message:find("command") and message:find("give") then 
           print(message)
-          messagedata = cgb.stringToTable(message)
+          messagedata = CGBCoreLib:stringToTable(message)
           for i = 3,#messagedata do
             commanddata[i-2]=messagedata[i]
           end
@@ -701,14 +701,14 @@ local function secondary()
         -- event, senderID, message, protocol = os.pullEvent("rednet_message")
         -- if message == "exchange Authorized" then
           print(message)
-          _, player, item, credcost, qty, damage = cgb.stringToVarsAll(message)
+          _, player, item, credcost, qty, damage = CGBCoreLib:stringToVarsAll(message)
           print(player .. " requested to exchange " .. qty .. " " .. item)
           local cost = tonumber(credcost) * qty
-          funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
+          funds = CGBCoreLib:loadConfig("data/blubank/users/" .. player .. ".lua")
           if cost <= funds.balance then
             rednet.send(senderID, "exchange-success")
             funds.balance = funds.balance - cost
-            cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
+            CGBCoreLib:saveConfig("data/blubank/users/" .. player .. ".lua",funds)
             --Check item maxcount and give accordingly
             --avoids no give bug if qty higher than maxcount
             for i = 1,#currency do
@@ -741,8 +741,8 @@ local function secondary()
         --authenticate("Withdrawal")
         --event, senderID, message, protocol = os.pullEvent("rednet_message")
         --if message == "Withdrawal Authorized" then
-          _, player, amount = cgb.stringToVars(message)
-          funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
+          _, player, amount = CGBCoreLib:stringToVars(message)
+          funds = CGBCoreLib:loadConfig("data/blubank/users/" .. player .. ".lua")
           print("funds: " .. funds.balance)
           withdrawalRequest = tonumber(amount)
           if withdrawalRequest <= funds.balance then
@@ -753,7 +753,7 @@ local function secondary()
               funds.balance = funds.balance - withdrawalRequest
             end
             print("Remaining: " .. funds.balance)
-            cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
+            CGBCoreLib:saveConfig("data/blubank/users/" .. player .. ".lua",funds)
             --calculate how many of each item to give
             for count = 1, #currency do
               itemName = currency[count].data.name
@@ -777,7 +777,7 @@ local function secondary()
             end
             --make sure remaining unwithdrawable credits get refunded
             funds.balance = funds.balance + withdrawalRequest
-            cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
+            CGBCoreLib:saveConfig("data/blubank/users/" .. player .. ".lua",funds)
           elseif withdrawalRequest > funds.balance then
             rednet.send(senderID, "insufficient funds Balance " .. funds.balance .. " credits.")
           end
@@ -787,11 +787,11 @@ local function secondary()
         --authenticate("Deposit")
         -- event, senderID, message, protocol = os.pullEvent("rednet_message")
         -- if message == "Deposit Authorized" then
-          _,player,amount = cgb.stringToVars(message)
+          _,player,amount = CGBCoreLib:stringToVars(message)
           print("Depositing " .. amount .. " credits into " .. player .. "s' account") 
-          funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
+          funds = CGBCoreLib:loadConfig("data/blubank/users/" .. player .. ".lua")
           funds.balance = funds.balance + tonumber(amount)
-          cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
+          CGBCoreLib:saveConfig("data/blubank/users/" .. player .. ".lua",funds)
           rednet.send(senderID,"deposit-success")
           --Funds addition code here
         -- end
@@ -804,33 +804,37 @@ local function secondary()
         --authenticate("Balance query")
         -- event, senderID, message, protocol = os.pullEvent("rednet_message")
         -- if message == "Balance query Authorized" then
-           _, player= cgb.stringToVars(message)
+           _, player= CGBCoreLib:stringToVars(message)
           if not fs.exists("data/blubank/users/" .. player .. ".lua") then
             print("Creating new account for: " .. player)
             if newAccAmount > 0 then
               print("Adding " .. newAccAmount .. " credits for " .. player)
             end
             funds.balance = newAccAmount
-            cgb.saveConfig("data/blubank/users/" .. player .. ".lua",funds)
+            CGBCoreLib:saveConfig("data/blubank/users/" .. player .. ".lua",funds)
           else
             print("Loading funds of: " .. player)
-            funds = cgb.loadConfig("data/blubank/users/" .. player .. ".lua")
+            funds = CGBCoreLib:loadConfig("data/blubank/users/" .. player .. ".lua")
           end
           rednet.send(senderID, "bal " .. funds.balance)
         --end
       elseif message:find("transfer") then
-        _, fromplayer, toplayer, amount = cgb.stringToVarsAll(message)
+        _, fromplayer, toplayer, amount = CGBCoreLib:stringToVarsAll(message)
         amount = tonumber(amount)
-        funds = cgb.loadConfig("data/blubank/users/" .. fromplayer .. ".lua")
+        funds = CGBCoreLib:loadConfig("data/blubank/users/" .. fromplayer .. ".lua")
         if amount > funds.balance then
           rednet.send(senderID, "insufficient funds You requested to transfer " .. amount .. " credits but have " .. funds.balance .. " credits!")
         elseif amount <= funds.balance then
           rednet.send(senderID, "transfer-success")
           funds.balance = funds.balance - amount
-          cgb.saveConfig("data/blubank/users/" .. fromplayer .. ".lua",funds)
-          funds = cgb.loadConfig("data/blubank/users/" .. toplayer .. ".lua")
+          CGBCoreLib:saveConfig("data/blubank/users/" .. fromplayer .. ".lua",funds)
+          if not fs.exists("data/blubank/users/" .. toplayer .. ".lua") then
+            local newbal = {balance = newAccAmount + amount}
+            CGBCoreLib:saveConfig("data/blubank/users/" .. toplayer .. ".lua", newbal)
+          end
+          funds = CGBCoreLib:loadConfig("data/blubank/users/" .. toplayer .. ".lua")
           funds.balance = funds.balance + amount
-          cgb.saveConfig("data/blubank/users/" .. toplayer .. ".lua",funds)
+          CGBCoreLib:saveConfig("data/blubank/users/" .. toplayer .. ".lua",funds)
           if commands then commands.tell(toplayer .. " " .. fromplayer .. " has just transferred you " .. amount .. " credits!") end
         end
       end
@@ -841,7 +845,7 @@ local function secondary()
         rednet.send(senderID, "password?")
         event,senderID,message = os.pullEvent("rednet_message")
         if message:find("pass:") then
-          _, pass = cgb.stringToVars(message)
+          _, pass = CGBCoreLib:stringToVars(message)
           rednet.send(senderID,pass)
           event,senderID,message = os.pullEvent("rednet_message")
           if message == "Authorization timed out!" then
@@ -934,7 +938,7 @@ local function main()
       repeat
         event,senderID,message = os.pullEvent("rednet_message")
       until message:find("bal")
-      _, bal= cgb.stringToVars(message)
+      _, bal= CGBCoreLib:stringToVars(message)
       outputString = stringNumberToThousands(bal)
       print("Your balance: " .. outputString .. " credits.")
       if pcType == "ATM" then
@@ -982,7 +986,7 @@ local function main()
           local replyString = "" 
           local insufficientFundsMessage = {}
           --"insufficent funds message"
-          messagedata = cgb.stringToTable(message)
+          messagedata = CGBCoreLib:stringToTable(message)
           for i = 3, #messagedata do
             insufficientFundsMessage[i-2]=messagedata[i]
           end
@@ -1053,7 +1057,7 @@ local function main()
         print("Please ensure you have spelled the playername correctly E.g: 'playername' is not 'PlayerName'")
         repeat
           input = io.read()
-          toplayer, amount = cgb.stringToVarsAll(input)
+          toplayer, amount = CGBCoreLib:stringToVarsAll(input)
           print("You have requested: " .. amount .. " credits to be transferred to: '" .. toplayer .."'.")
           print("Is this correct? Press Y or N. N will cancel the operation")
           event,c = os.pullEvent("char")
@@ -1067,7 +1071,7 @@ local function main()
             local replyString = "" 
             local insufficientFundsMessage = {}
             --"insufficent funds message"
-            messagedata = cgb.stringToTable(message)
+            messagedata = CGBCoreLib:stringToTable(message)
             for i = 3, #messagedata do
               insufficientFundsMessage[i-2]=messagedata[i]
             end
@@ -1085,7 +1089,7 @@ local function main()
         print("Credit Exchange Store")
         print("Your Balance: " .. outputString .. " credits.")
         local _, screenSize = term.getSize()
-        local pageData=cgb.tableToPageData(term,currency,2)
+        local pageData=CGBCoreLib:tableToPageData(term,currency,2)
         for page = 1, #pageData do
           term.clear()
           for line = 1, #pageData[page] do
@@ -1147,7 +1151,7 @@ local function main()
           local replyString = "" 
           local insufficientFundsMessage = {}
           --"insufficent funds message"
-          messagedata = cgb.stringToTable(message)
+          messagedata = CGBCoreLib:stringToTable(message)
           for i = 3, #messagedata do
             insufficientFundsMessage[i-2]=messagedata[i]
           end
