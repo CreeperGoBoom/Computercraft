@@ -9,7 +9,7 @@ Storage scheme is as follows: "data/programOrShorthandName/"
 
 I have kept file naming to lowercase as much as possible with the only exception of my APIs to (try) ensure cross platform stability.
 
-Let me know of any issues by raising a bug report and I'll try to get to them as soon as possible.
+Let me know of any issues by raising an issue and I'll try to get to them as soon as possible.
 
 Keep an eye on this repository for new projects. I'll keep em coming as time goes by.
 
