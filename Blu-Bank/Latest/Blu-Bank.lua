@@ -163,7 +163,7 @@ end
 
 --Get API if don't already have
 if not fs.exists("apis/CGBCoreLib.lua") then
-  if not httpGet("https://pastebin.com/raw/xuMVS2GP", "apis/CGBCoreLib.lua") then
+  if not httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/apis/CGBCoreLib.lua", "apis/CGBCoreLib.lua") then
     error("Error: Dependancy 'CGBCoreLib' could not be downloaded. Please connect your internet and restart")
   end
 end
@@ -184,7 +184,7 @@ local requiredAPIFuncs = {
 --Check API to ensure not outdated
 for _ , func in pairs(requiredAPIFuncs) do 
   if not CGBCoreLib[func] then
-    if not httpGet("https://pastebin.com/raw/xuMVS2GP", "apis/CGBCoreLib.lua") then
+    if not httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/apis/CGBCoreLib.lua", "apis/CGBCoreLib.lua") then
       error("Error: Your version of CGBCoreLib is outdated! Please connect your internet and restart!")
     else
       os.reboot()
