@@ -179,6 +179,8 @@ local requiredAPIFuncs = {
   "findPeripheralOnSide",
   "isInList",
   "stringToTable",
+  "getKeyPressYN",
+  "getKeyPressFromList"
   }
 
 --Check API to ensure not outdated
@@ -244,7 +246,7 @@ local function configure(boolOverride)
     CGBCoreLib:fileWrite("data/blubank/" .. pcType .. ".type")  --Don't have to repeat this anywhere now
     if pcType == "Bank" then
       --Bank server selected. Ensure no other bank server active by pinging for server.
-      --Start a 3 second timer for if there is no answer to ping.
+      --Start a 1 second timer for if there is no answer to ping.
       print("Reminder: This chunk must now remain loaded at all times to avoid problems with ATMs working. Press any key to continue.")
       os.pullEvent("key")
       print("Pinging for existing bank server...")
@@ -319,30 +321,6 @@ local function listPeripheralsByName(...)
     end
   end
   return temp
-end
-
-local function alignText(tableScreen, stringText, stringAlignTo, boolLastLine)
-  --prints on previous line. Allows things like !item        cost!
-  local boolLastLine = boolLastLine or false
-  local screen = tableScreen
-  local x,y = screen.getSize()
-  local stringLength = stringText:len()
-  local midpoint = ((x / 2) - (stringLength / 2))+1
-  local right = (x - stringLength) + 1
-  local cursorPosX, cursorPosY = screen.getCursorPos()
-  if stringLastLine then
-    cursorPosY = cursorPosY - 1
-  end
-  if stringAlignTo == "left" then
-    screen.setCursorPos(cursorPosX,cursorPosY)  
-  elseif stringAlignTo == "center" then
-    screen.setCursorPos(midpoint,cursorPosY)
-  elseif stringAlignTo == "right" then
-    screen.setCursorPos(right,cursorPosY)
-  else
-    error("alignText: Bad argument #3: expected left, center or right!")
-  end
-  screen.write(stringText)
 end
 
 
@@ -568,12 +546,12 @@ local function updateCurrencyScreen()
       until hundreds:len() == 3
     end
     if thousands == 0 then
-      alignText(cmonitor,dispName .. ":","left")
-      alignText(cmonitor,hundreds,"right",true)
+      CGBCoreLib.alignText(cmonitor,dispName .. ":","left")
+      CGBCoreLib.alignText(cmonitor,hundreds,"right",true)
       --cmonitor.write(dispName .. ": ".. hundreds)
     else
-      alignText(cmonitor,dispName .. ":","left")
-      alignText(cmonitor,thousands .. "," .. hundreds,"right")
+      CGBCoreLib.alignText(cmonitor,dispName .. ":","left")
+      CGBCoreLib.alignText(cmonitor,thousands .. "," .. hundreds,"right")
       --cmonitor.write(dispName .. ": " .. thousands .. "," .. hundreds)
     end
     cmonitor.setCursorPos(1,line)
@@ -593,9 +571,9 @@ local function updateMonitor(stringNewMsg,colorName)
   monitor.setTextScale(2)
   monitor.clear()
   monitor.setCursorPos(1,1)
-  alignText(monitor,"Blu-Bank " .. pcType,"center")
+  CGBCoreLib.alignText(monitor,"Blu-Bank " .. pcType,"center")
   monitor.setCursorPos(1,2)
-  alignText(monitor,stringNewMsg,"center")
+  CGBCoreLib.alignText(monitor,stringNewMsg,"center")
 end
 
 local function buildingSign()
@@ -918,7 +896,7 @@ local function main()
       -- greetingWindow.setBackgroundColor(colors.blue)
       -- greetingWindow.setTextColor(colors.white)
       -- greetingWindow.clear()
-      -- alignText(greetingWindow,"Hello player","center")
+      -- CGBCoreLib.alignText(greetingWindow,"Hello player","center")
       updateMonitor("Awaiting Player approach...")
       resetTerm()
       currencyLookupSimple() --updates the 
@@ -1096,8 +1074,8 @@ local function main()
             term.setCursorPos(1,line)
             local dispName = pageData[page][line].data.displayName
             local cost = stringNumberToThousands(pageData[page][line].value)
-            alignText(term,"'" .. dispName .. "':","left")
-            alignText(term,cost,"right",true)
+            CGBCoreLib.alignText(term,"'" .. dispName .. "':","left")
+            CGBCoreLib.alignText(term,cost,"right",true)
           end
         pressAnyKey()
         end

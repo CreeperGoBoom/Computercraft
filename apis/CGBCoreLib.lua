@@ -503,3 +503,27 @@ function CGBCoreLib.getKeyPressFromList(tableKeyNames)
   os.sleep()
   return key
 end
+
+function CGBCoreLib.alignText(tableScreen, stringText, stringAlignTo, boolLastLine)
+  --prints on previous line. Allows things like !item        cost!
+  local boolLastLine = boolLastLine or false
+  local screen = tableScreen
+  local x,y = screen.getSize()
+  local stringLength = stringText:len()
+  local midpoint = ((x / 2) - (stringLength / 2))+1
+  local right = (x - stringLength) + 1
+  local cursorPosX, cursorPosY = screen.getCursorPos()
+  if stringLastLine then
+    cursorPosY = cursorPosY - 1
+  end
+  if stringAlignTo == "left" then
+    screen.setCursorPos(cursorPosX,cursorPosY)  
+  elseif stringAlignTo == "center" then
+    screen.setCursorPos(midpoint,cursorPosY)
+  elseif stringAlignTo == "right" then
+    screen.setCursorPos(right,cursorPosY)
+  else
+    error("alignText: Bad argument #3: expected left, center or right!")
+  end
+  screen.write(stringText)
+end
