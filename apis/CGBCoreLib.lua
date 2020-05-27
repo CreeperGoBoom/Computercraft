@@ -9,15 +9,15 @@ Will force usage of 'CGBcoreLib' instead of other var names used.
 Only needs a require with no var name unless want to check if loaded.
 ]]
 
+
 CGBCoreLib = {}
 local doOnceNoColorWarning = {
   ["colorPrint"] = true, 
   ["errorPrint"] = true
 }  -- For displaying a one time warning about no color capability
 
-
 --Returms a wrap table. Throws error if non existing.
-function CGBCoreLib:checkPeripheralExists(periph,stringError)
+function CGBCoreLib.checkPeripheralExists(periph,stringError)
   local periph = (type(periph) == "string" and peripheral.wrap(periph))
     or (type(periph) == "table" and periph)
     or (error(stringError,3))
@@ -25,21 +25,21 @@ function CGBCoreLib:checkPeripheralExists(periph,stringError)
 end
 
 --Writes data to a file, data can be anything except a function
-function CGBCoreLib:fileWrite(stringFileName,data) 
+function CGBCoreLib.fileWrite(stringFileName,data) 
   local file = fs.open(stringFileName, "w")
   file.write(data)
   file.close()
 end
 
 --Gets user input for a prompt
-function CGBCoreLib:getUserInput(stringPrompt)  
+function CGBCoreLib.getUserInput(stringPrompt)  
   print(stringPrompt)
   local result = io.read()
   return result
 end
 
 --Checks a string against a table of answers and prints available answers if incorrect
-function CGBCoreLib:checkAnswer(stringInput,tableAnswers) 
+function CGBCoreLib.checkAnswer(stringInput,tableAnswers) 
   for _, key in pairs(tableAnswers) do
     if key == stringInput then
       return true
@@ -50,7 +50,7 @@ function CGBCoreLib:checkAnswer(stringInput,tableAnswers)
 end
 
 --Checks a string against a table of answers.
-function CGBCoreLib:checkAnswerSilent(stringInput, tableAnswers) 
+function CGBCoreLib.checkAnswerSilent(stringInput, tableAnswers) 
   for _, key in pairs(tableAnswers) do
     if key == stringInput then
       return true
@@ -60,7 +60,7 @@ function CGBCoreLib:checkAnswerSilent(stringInput, tableAnswers)
 end
 
 --Gets user input and checks input against answer table.
-function CGBCoreLib:getAnswer(stringPrompt, tableAnswers)  
+function CGBCoreLib.getAnswer(stringPrompt, tableAnswers)  
   local input
   repeat
     input = self:getUserInput(stringPrompt)
@@ -69,7 +69,7 @@ function CGBCoreLib:getAnswer(stringPrompt, tableAnswers)
 end
 
 --Gets user input and checks against answer table while showing available answers in prompt
-function CGBCoreLib:getAnswerWithPrompts(stringPrompt, tableAnswers) 
+function CGBCoreLib.getAnswerWithPrompts(stringPrompt, tableAnswers) 
   local input
   repeat
     input = self:getUserInput(stringPrompt .. " " .. table.concat(tableAnswers, ", "), ".")
@@ -78,14 +78,14 @@ function CGBCoreLib:getAnswerWithPrompts(stringPrompt, tableAnswers)
 end
 
 --Returns wrap if peripheral name found
-function CGBCoreLib:findPeripheral(stringName,stringAltName)  
+function CGBCoreLib.findPeripheral(stringName,stringAltName)  
   if type(stringName) ~= "string" then return end
   if type(stringAltName) ~= "string" then return end
   return peripheral.find(stringName) or peripheral.wrap(stringAltName)
 end
 
 --Returns entered name or altname if peripheral found
-function CGBCoreLib:peripheralCheck(stringName, stringAltName) 
+function CGBCoreLib.peripheralCheck(stringName, stringAltName) 
   if type(stringName) ~= "string" then return end
   if type(stringAltName) ~= "string" then return end
   if peripheral.find(stringName) then return stringName elseif peripheral.wrap(stringAltName) then return stringAltName end
@@ -93,7 +93,7 @@ end
 
 --Returns a table of all connected peripheral names containing Name
 --Function idea by FatBoyChummy
-function CGBCoreLib:getPeripherals(stringName)
+function CGBCoreLib.getPeripherals(stringName)
   local peripherals = {}
   local n = 0
   for _, name in pairs(peripheral.getNames()) do
@@ -105,7 +105,7 @@ function CGBCoreLib:getPeripherals(stringName)
   return peripherals
 end
 
-function CGBCoreLib:listPeripheralsByName(...)
+function CGBCoreLib.listPeripheralsByName(...)
   local temp = {}
   local temp2 = {}
   local count = 1
@@ -121,7 +121,7 @@ function CGBCoreLib:listPeripheralsByName(...)
 end
 
 --Returns a table of color names as string
-function CGBCoreLib:getColorNames()
+function CGBCoreLib.getColorNames()
   local doNotAddIfContain = {"test","pack","rgb","combine","subtract"}
   local colorNames = {}
   local doNotAdd = false
@@ -141,9 +141,9 @@ function CGBCoreLib:getColorNames()
   return colorNames
 end
 
-local colorNamesList = CGBCoreLib:getColorNames()
+local colorNamesList = CGBCoreLib.getColorNames()
 
-function CGBCoreLib:loadConfig(configFileName)
+function CGBCoreLib.loadConfig(configFileName)
   local file = fs.open(configFileName, "r")
   local fData = file.readAll()
   local config = textutils.unserialize(fData)
@@ -151,19 +151,19 @@ function CGBCoreLib:loadConfig(configFileName)
   return config
 end
 
-function CGBCoreLib:saveConfig(configFileName,data)
+function CGBCoreLib.saveConfig(configFileName,data)
   local sData = textutils.serialize(data)
   self:fileWrite(configFileName,sData)
 end
 
-function CGBCoreLib:tablePrint(tableVar)
+function CGBCoreLib.tablePrint(tableVar)
   if tableVar then 
     local sData = textutils.serialize(tableVar)
     print(sData)
   end
 end
 
-function CGBCoreLib:getTableSize(table)
+function CGBCoreLib.getTableSize(table)
   local count = 0
   for i , _ in pairs(table) do
     count = count + 1
@@ -171,7 +171,7 @@ function CGBCoreLib:getTableSize(table)
   return count
 end
 
-function CGBCoreLib:getAnswerAsNumbers(stringPrompt,tableAnswers) --returns answer chosen from table.
+function CGBCoreLib.getAnswerAsNumbers(stringPrompt,tableAnswers) --returns answer chosen from table.
   --Lists entries
   local answer
   local tableVar = {} --stores key and value depending if key is a number or not
@@ -201,7 +201,7 @@ function CGBCoreLib:getAnswerAsNumbers(stringPrompt,tableAnswers) --returns answ
   return tableVar[answer] 
 end
 
-function CGBCoreLib:getAnswerAsNumbersGrouped(stringPrompt,tableAnswers) --returns answer chosen from table.
+function CGBCoreLib.getAnswerAsNumbersGrouped(stringPrompt,tableAnswers) --returns answer chosen from table.
   --groups entries as per num per line, recommend no more than 3
   local answer
   local tableVar = {}  --creates a searchable table. since not all tables that are entered have numbers as keys
@@ -234,7 +234,7 @@ function CGBCoreLib:getAnswerAsNumbersGrouped(stringPrompt,tableAnswers) --retur
   return tableVar[answer] 
 end
 
-function CGBCoreLib:findPeripheralOnSide(stringPeripheral) --returns side. Ignores peripherals behind modems etc.
+function CGBCoreLib.findPeripheralOnSide(stringPeripheral) --returns side. Ignores peripherals behind modems etc.
   local sides = redstone.getSides()
   for _ , side in pairs(sides) do
     if peripheral.getType(side) == stringPeripheral then
@@ -249,7 +249,7 @@ end
 
 
 --This might be redundant
-function CGBCoreLib:peripheralCall(stringName,stringMethod,...)  --An enhanced peripheral.call
+function CGBCoreLib.peripheralCall(stringName,stringMethod,...)  --An enhanced peripheral.call
   --Can check for name or side
   --Also checks network for peripheral
   local periph = peripheral.wrap(stringName)
@@ -270,7 +270,7 @@ function CGBCoreLib:peripheralCall(stringName,stringMethod,...)  --An enhanced p
 end
 
 -- A simplified table.insert
-function CGBCoreLib:tableInsert(tableVar,numOrStringKey,value)
+function CGBCoreLib.tableInsert(tableVar,numOrStringKey,value)
   if type(value) == "nil"  then
     table.insert(tableVar,numOrStringKey)
   else
@@ -280,7 +280,7 @@ function CGBCoreLib:tableInsert(tableVar,numOrStringKey,value)
 end
 
 --Print in color if available else warn of no color.
-function CGBCoreLib:colorPrint(stringColorName,string)
+function CGBCoreLib.colorPrint(stringColorName,string)
   if term.isColor() then
     if not pcall(term.setTextColour,colors[stringColorName]) then
       print(textutils.pagedTabulate(colorNamesList))
@@ -301,7 +301,7 @@ end
 --Red printing. Very angry red bwahaha!
 --Avoids stop that error causes
 --Warns if no color available
-function CGBCoreLib:errorPrint(string)
+function CGBCoreLib.errorPrint(string)
   if term.isColor() then
     term.setTextColour(colors.red)
     print(string)
@@ -316,7 +316,7 @@ function CGBCoreLib:errorPrint(string)
 end
 
 --Checks a string against a list of strings. Only returns true or false
-function CGBCoreLib:isInList(stringToCheck,tableList)
+function CGBCoreLib.isInList(stringToCheck,tableList)
   local isListed = false
   for k,v in pairs(tableList) do
     if v == stringToCheck then
@@ -331,7 +331,7 @@ end
 
 --Turns a string into a table
 --ignores non alphanumeric chars
-function CGBCoreLib:stringToTable(stringInput)
+function CGBCoreLib.stringToTable(stringInput)
   local tableOutput = {}
   local n=0
   for i in string.gmatch(stringInput, "%w+") do
@@ -343,7 +343,7 @@ end
 
 --Turns a string into a table
 --ignores only spaces
-function CGBCoreLib:stringToTable(stringInput)
+function CGBCoreLib.stringToTable(stringInput)
   local tableOutput = {}
   local n=0
   for i in string.gmatch(stringInput, "%S+") do
@@ -356,7 +356,7 @@ end
 --Splits a string into seperate vars
 --Example: this, string = stringToVars("this string")
 --ignores non alphanumeric characters and counts them as spaces (-=+:;>?/) etc
-function CGBCoreLib:stringToVars(stringInput)
+function CGBCoreLib.stringToVars(stringInput)
   local tableOutput = {}
   local n=0
   for i in string.gmatch(stringInput, "%w+") do
@@ -369,7 +369,7 @@ end
 --Splits a string into seperate vars
 --Example: this, string = stringToVars("this string")
 --More inclusive, only ignores spaces
-function CGBCoreLib:stringToVarsAll(stringInput)
+function CGBCoreLib.stringToVarsAll(stringInput)
   local tableOutput = {}
   local n=0
   for i in string.gmatch(stringInput, "%S+") do
@@ -381,7 +381,7 @@ end
 
 --Returns a table of all peripherals containing "x","y","z"
 --Allows for (storage = api.listPeripheralsByName("chest","shulker")
-function CGBCoreLib:listPeripheralsByName(...)
+function CGBCoreLib.listPeripheralsByName(...)
   local temp = {}
   local peripherals = peripheral.getNames()
   for k , v in pairs({...}) do
@@ -397,7 +397,7 @@ end
 --Creates a table with converted page data for 'x' screen, allows printing by page num using for i = 1,#table[page] do. 
 --Table must have 1, 2, 3, etc as keys
 --screen must be wrapped
-function CGBCoreLib:tableToPageData(screen, tableData, optNumberLinestoExclude)
+function CGBCoreLib.tableToPageData(screen, tableData, optNumberLinestoExclude)
   local pageData = {}
   local optNumberLinestoExclude = optNumberLinestoExclude or 0
   local screen = ( type(screen) == "string" and peripheral.wrap(screen) ) 
@@ -428,7 +428,7 @@ end
 
 --Simply reconstructs a number or nuber string to include thousands seperators.
 --Reconstucted back to front for accuracy
-function CGBCoreLib:stringNumberToThousands(inputString)
+function CGBCoreLib.stringNumberToThousands(inputString)
   local numcheck = tonumber(inputString)
   --Check if input converts to a number
   if (type(inputString)=="nil") or (not numcheck) then
@@ -469,11 +469,37 @@ end
 
 --Returns complete data set for items contained in chest
 --chest can be string name or wrapped chest.
-function CGBCoreLib:getChestMeta(chest)
-  chest = CGBCoreLib:checkPeripheralExists(chest, "Invalid chest") 
+function CGBCoreLib.getChestMeta(chest)
+  chest = CGBCoreLib.checkPeripheralExists(chest, "Invalid chest") 
   local meta = {}
   for slot, item in pairs(chest.list()) do
     table.insert(meta,chest.getItemMeta(slot))
   end
   return meta
+end
+
+--Waits on key press for y or n
+function CGBCoreLib.getKeyPressYN()
+  local event, key
+  repeat
+    event, key = os.pullEvent("key")
+  until key == keys.y or key == keys.n
+  os.sleep()
+  return key
+end
+
+--Waits on keypress matching tableKeyNames
+function CGBCoreLib.getKeyPressFromList(tableKeyNames)
+  local event, key
+  local keyMatch = false
+  repeat
+    event, key = os.pullEvent("key")
+    for _, keyname in pairs(tableKeyNames) do
+      if key == keys[keyname] then
+        keyMatch=true
+      end
+    end
+  until keyMatch
+  os.sleep()
+  return key
 end
