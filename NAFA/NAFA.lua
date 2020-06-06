@@ -17,6 +17,7 @@ BUGFIXES:
 -Fixed system requiring extra fuel in chests in order to extract output.
 
 FEATURES:
+-Only runs to fuel avilability. if there are 40 furnaces but only enough fuel to run 5, it will only run 5 furnaces until there is more fuel made avilable.
 -Now runs in parallel, additional event features now possible.
 -Feeds fuel and ingredients based on vars below.
 -For example, if a furnace runs out of fuel. it will then send fuel at the fuel rate specified 
@@ -43,7 +44,7 @@ local ingredients = {
 
 local fuels = {
   "minecraft:coal", 
-  "minecraft:sapling",
+  --"minecraft:sapling",
 }
 local idprint = false   --saves all item data from chests into file idprint.lua
 
