@@ -1,44 +1,72 @@
 --[[
 NAFA - Not another Furnace Automater by CreeperGoBoom
-This program works in 2 simple steps.
+This program works in 3 simple steps.
 1. Network your chests and furnaces up.
 2. Install this program onto a networked computer.
+3. Add / remove chests, shulkers, furnaces as desired.
 
 Alternatively you could set this up first and it will detect all new chests and furnaces as you set up.
 
 To reconfigure chest / furnace layout:
-Simply add and remove furnaces ((Coming soon!) and chests) as required.
+Simply add and remove furnaces and chests as required.
 
 BUGFIXES:
 -Fixed furnaces crashing script due to disconnect bug. 
 -Note: Now each furnace that disconnects is removed and then readded to furnace list.
-
-TODO:
--Chest readding and checking like furnaces.
--Table to keep track of peripheral types.
--Shulker boxes.
+-Fixed Fuels and ingredients being sent randomly in multiples, this meant that not all furnaces were put to use.
 
 FEATURES:
 -Now runs in parallel, additional event features now possible.
--Now feeds fuel and ingredients based on vars below.
+-Feeds fuel and ingredients based on vars below.
 -For example, if a furnace runs out of fuel. it will then send fuel at the fuel rate specified 
  and wait for the furnace to run out before refueling.
 -Plethora optimized.
 -Fuel and ingredient rates shown on main screen.
+-On the fly configuration, just add and remove furnaces, chests, shulkers etc as desired.
+-Works with anything containing "chest" or "shulker" in the name, this means that iron chest mod chests and shulker boxes will work without any interaction. Add your own custom names below.
+-Also works with anything containing "furnace" or custom
+
 ]]
 
 --VARS
+local version = "V1.3"
 local furnaceFuelRate = 1  --How much fuel will be placed into the furnaces when empty?
 local furnaceIngredientsRate = 8  --How many ingredients to send to furnaces at one time?
-local ingredients = {"minecraft:cobblestone", "minecraft:sand", "minecraft:iron_ore", "minecraft:gold_ore", "minecraft:log" }
-local fuels = {"minecraft:coal", "minecraft:sapling"}
+local ingredients = {
+  "minecraft:cobblestone", 
+  "minecraft:sand", 
+  "minecraft:iron_ore", 
+  "minecraft:gold_ore", 
+  "minecraft:log", 
+}
+
+local fuels = {
+  "minecraft:coal", 
+  "minecraft:sapling",
+}
 local idprint = false   --saves all item data from chests into file idprint.lua
 
+--Enter all custom chest names here
+--Checked against chest names eg: 'minecraft:chest'
+local storageTypes = {
+  "chest",
+  "shulker",
+  --"box",
+  --"storage",
+  --"crate",
+}
+
+--Enter all custom furnaces here.
+--Should work with Thermal Expansion right away.
+local furnaceTypes = {
+  "furnace",
+  
+}
+
 local requiredAPIFuncs = {
-  "fileWrite",
   "saveConfig",
   "colorPrint",
-  "getPeripherals",
+  "listPeripheralsByName",
   }
 
 local function httpGet(stringURL, stringFileNameToSaveTo)
@@ -95,30 +123,18 @@ local function getChestInfo()
   return meta
 end
 
--- local function getStorage(...)
-  -- local temp = {}
-  -- local temp2 = {}
-  -- local count = 1
-  -- local peripherals = peripheral.getNames()
-  -- for k , v in pairs({...}) do
-    -- for _ , name in pairs(peripherals) do
-      -- if name:find(v) then
-        -- table.insert(temp,name)
-      -- end
-    -- end
-  -- end
-  -- return temp
--- end
-    
 
 local function main()
   while true do
     term.clear()
     term.setCursorPos(1, 1)
-    CGBCoreLib.colorPrint("orange","NAFA V1.2 (Not Another Furnace Automater)")
-    furnaces = CGBCoreLib.listPeripheralsByName("furnace")
-    storage = CGBCoreLib.listPeripheralsByName("chest","shulker")
+    CGBCoreLib.colorPrint("orange","NAFA " .. version .. " (Not Another Furnace Automater)")
+    --Recompile all chests and furnaces for this new cycle. 
+    --This allows chests and furnaces to be added on the fly
+    furnaces = CGBCoreLib.listPeripheralsByName(table.unpack(furnaceTypes))
+    storage = CGBCoreLib.listPeripheralsByName(table.unpack(storageTypes))
     CGBCoreLib.saveConfig("storage.lua",storage)
+    --Get item info from all storage.
     data = getChestInfo()
     
     --Statuses
@@ -133,45 +149,23 @@ local function main()
       CGBCoreLib.colorPrint("green","Fuel rate: " .. furnaceFuelRate .. " per refuel.")
       CGBCoreLib.colorPrint("green","Ingredient rate: " .. furnaceIngredientsRate .. " per refill.")
     end
-
-    --[[
-    Need to check each item in each chest,
-    Then build an item list of processable items.
-    possibly in format of:
-    {
-      [num]= {
-        chestNetworkName="",
-        slot=0,
-      }
-    }
-    Then process each item using a for in loop first checking the furnace to send to.
-    Removing items from list as processed. 
-    --Keeping track of [num]. or
-    --List gets refreshed every "cycle"
-    Building a seperate list of items in furnaces as sent to furnaces as to only check those furnaces for output.
-    Need to also save/load each list to file to stop uneccessary checks etc.
-    This in turn should make it more plethora friendly as well as remove the odd multiplying behavior encountered simply because currently the code simply isn't working how I think it will. 
-    After close inspection of odd behaviour, I realize it is doing exactly as I coded it.
     
-    Right now this code needs redoing as above.
-    
-    Also need to bring up the coreLib usage to current and update any func calls etc
-    ]]
     --Main operation code
     local count={
       fuel = 1,
       ingredients = 1,
     }
     if furnaces[1] and storage[1] then
+      --Clear processing list for new cycle
       local processList={
         fuels = {},
         ingredients={}
-      } --Clear processing list for new "cycle"
+      }
+      --Write list for this cycle
       for chestName , chestContents in pairs(data) do --Check each chest and
         for slot , item in pairs(chestContents) do --process each slot
           for _ , fuel in pairs(fuels) do
             if item.name == fuel then
-              --table.insert(debug,furnace .. " received " .. furnaceFuelRate .. " fuel from " .. chestName)
               processList.fuels[count.fuel]={}
               processList.fuels[count.fuel].chestName=chestName
               processList.fuels[count.fuel].slot=slot
@@ -180,7 +174,6 @@ local function main()
           end
           for _ , ingredient in pairs(ingredients) do
             if item.name == ingredient then
-              --table.insert(debug,furnace .. " received " .. furnaceIngredientsRate .. " " .. item.name .. " from " .. chestName)
               processList.ingredients[count.ingredients]={}
               processList.ingredients[count.ingredients].chestName=chestName
               processList.ingredients[count.ingredients].slot=slot
@@ -189,9 +182,10 @@ local function main()
           end
         end
       end
-      --for chestNum , chest in pairs(storage) do
-      --for f = 1, #furnaces do
-      for furnaceNum , furnace in pairs(furnaces) do --For each furnace
+      --List created. Process what can be processed this cycle.
+      for furnaceNum , furnace in pairs(furnaces) do 
+        --For each furnace
+        --Ensure operation cycle a success.\/
         local success  = pcall(function ()   
           furnaceContents = peripheral.call(furnace, "list")
           --[[Basic order of operation here:
@@ -205,18 +199,21 @@ local function main()
                   3.Check that ingredients slot is empty.
               Send new lot of ingredients as per vars at top.]]
           if furnaceContents[3] and furnaceContents[3].count then --only pushes items out if theres something there else it wont call it, makes it more plethora friendly.
+            -- If there is output available then attempt push to each chest until push successful. No point processing any more if chests are full.
             for i = 1, #storage do
               if pcall(peripheral.call,furnace, "pushItems", storage[i], 3, furnaceContents[3].count) then
                 break
               end
             end
-          elseif not (furnaceContents[2] and furnaceContents[2].count) then -- Refuel
+          -- Refuel
+          elseif not (furnaceContents[2] and furnaceContents[2].count) then
             for i = 1, #processList.fuels do
               if pcall(peripheral.call,processList.fuels[i].chestName, "pushItems", furnace, processList.fuels[i].slot, furnaceFuelRate, 2) then
                 break 
               end
             end
-          elseif not (furnaceContents[1] and furnaceContents[1].count) then -- Refill ingredients
+          -- Refill ingredients
+          elseif not (furnaceContents[1] and furnaceContents[1].count) then
             for i = 1, #processList.ingredients do
               if pcall(peripheral.call,processList.ingredients[i].chestName, "pushItems", furnace, processList.ingredients[i].slot, furnaceIngredientsRate, 1) then
                 break 
@@ -225,6 +222,7 @@ local function main()
           end
         
         end)
+        --Else remove problem furnace from furnace list. Disconnect catcher below should handle readding.
         if not success then
           print(furnaceNum)
           table.remove(furnaces, furnaceNum)
@@ -237,12 +235,15 @@ local function main()
 end
 
 local function secondary()
+  -- Furnace disconnect catcher
+  -- Removes problem furnace and readds it as soon as it becomes available again. 
+  -- This allows furnaces to be added / removed on the fly.
   local x = 10 -- interval in seconds
   local tmr = os.startTimer(x)
   while true do
     local event = {os.pullEvent()}
     if event[1] == "timer" and event[2] == tmr then
-      os.queueEvent("runmain") -- tell maim func to run
+      os.queueEvent("runmain") -- tell main func to run
       tmr = os.startTimer(x)
     elseif event[1] == "peripheral_detach" then
       for k , v in pairs(furnaces) do
