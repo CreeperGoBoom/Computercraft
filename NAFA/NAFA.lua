@@ -14,6 +14,7 @@ BUGFIXES:
 -Fixed furnaces crashing script due to disconnect bug. 
 -Note: Now each furnace that disconnects is removed and then readded to furnace list.
 -Fixed Fuels and ingredients being sent randomly in multiples, this meant that not all furnaces were put to use.
+-Fixed system requiring extra fuel in chests in order to extract output.
 
 FEATURES:
 -Now runs in parallel, additional event features now possible.
@@ -223,7 +224,7 @@ local function main()
           end
         
         end)
-        --Else remove problem furnace from furnace list. Disconnect catcher below should handle readding.
+        --Else remove problem furnace from furnace list. Disconnect catcher below should handle readding (partially).
         if not success then
           table.remove(furnaces, furnaceNum)
         end
