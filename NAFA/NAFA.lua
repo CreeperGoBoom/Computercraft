@@ -130,7 +130,8 @@ local function main()
     term.setCursorPos(1, 1)
     CGBCoreLib.colorPrint("orange","NAFA " .. version .. " (Not Another Furnace Automater)")
     --Recompile all chests and furnaces for this new cycle. 
-    --This allows chests and furnaces to be added on the fly
+    --This allows chests and furnaces to be added on the fly.
+    --Should also make all furnaces available most of the time.
     furnaces = CGBCoreLib.listPeripheralsByName(table.unpack(furnaceTypes))
     storage = CGBCoreLib.listPeripheralsByName(table.unpack(storageTypes))
     CGBCoreLib.saveConfig("storage.lua",storage)
@@ -224,7 +225,6 @@ local function main()
         end)
         --Else remove problem furnace from furnace list. Disconnect catcher below should handle readding.
         if not success then
-          print(furnaceNum)
           table.remove(furnaces, furnaceNum)
         end
       end
