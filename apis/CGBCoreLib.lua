@@ -9,12 +9,17 @@ Will force usage of 'CGBcoreLib' instead of other var names used.
 Only needs a require with no var name unless want to check if loaded.
 ]]
 
-
 CGBCoreLib = {}
 local doOnceNoColorWarning = {
   ["colorPrint"] = true, 
   ["errorPrint"] = true
 }  -- For displaying a one time warning about no color capability
+
+function string:adj(amount)
+  print(string)
+  string = (tostring(tonumber(string)+amount)) or (error("string:adj: not a number string"))
+  return string
+end
 
 --Returms a wrap table. Throws error if non existing.
 function CGBCoreLib.checkPeripheralExists(periph,stringError)
@@ -22,6 +27,11 @@ function CGBCoreLib.checkPeripheralExists(periph,stringError)
     or (type(periph) == "table" and periph)
     or (error(stringError,3))
   return periph
+end
+
+function CGBCoreLib.makeFile(stringName)
+  local f = fs.open(stringName,"w")
+  f.close()
 end
 
 --Writes data to a file, data can be anything except a function
@@ -72,8 +82,8 @@ end
 function CGBCoreLib.getAnswerWithPrompts(stringPrompt, tableAnswers) 
   local input
   repeat
-    input = self:getUserInput(stringPrompt .. " " .. table.concat(tableAnswers, ", "), ".")
-  until self:checkAnswer(input, tableAnswers)
+    input = CGBCoreLib.getUserInput(stringPrompt .. " " .. table.concat(tableAnswers, ", "), ".")
+  until CGBCoreLib.checkAnswer(input, tableAnswers)
   return input
 end
 
@@ -103,21 +113,6 @@ function CGBCoreLib.getPeripherals(stringName)
     end
   end
   return peripherals
-end
-
-function CGBCoreLib.listPeripheralsByName(...)
-  local temp = {}
-  local temp2 = {}
-  local count = 1
-  local peripherals = peripheral.getNames()
-  for k , v in pairs({...}) do
-    for _ , name in pairs(peripherals) do
-      if name:find(v) then
-        table.insert(temp,name)
-      end
-    end
-  end
-  return temp
 end
 
 --Returns a table of color names as string
@@ -153,7 +148,7 @@ end
 
 function CGBCoreLib.saveConfig(configFileName,data)
   local sData = textutils.serialize(data)
-  self:fileWrite(configFileName,sData)
+  CGBCoreLib.fileWrite(configFileName,sData)
 end
 
 function CGBCoreLib.tablePrint(tableVar)
@@ -315,18 +310,15 @@ function CGBCoreLib.errorPrint(string)
   end
 end
 
---Checks a string against a list of strings. Only returns true or false
+--Checks a string against a list of strings. Returns true and id or false.
 function CGBCoreLib.isInList(stringToCheck,tableList)
-  local isListed = false
-  for k,v in pairs(tableList) do
-    if v == stringToCheck then
-      isListed = true
-      return true
+  for id, check in pairs(tableList) do
+    if stringToCheck == check then
+      return true,id
     end
   end
-  if not isListed then
-    return false
-  end
+  --Not found in list
+  return false
 end
 
 --Turns a string into a table
@@ -504,26 +496,38 @@ function CGBCoreLib.getKeyPressFromList(tableKeyNames)
   return key
 end
 
-function CGBCoreLib.alignText(tableScreen, stringText, stringAlignTo, boolLastLine)
-  --prints on previous line. Allows things like !item        cost!
-  local boolLastLine = boolLastLine or false
-  local screen = tableScreen
-  local x,y = screen.getSize()
-  local stringLength = stringText:len()
-  local midpoint = ((x / 2) - (stringLength / 2))+1
-  local right = (x - stringLength) + 1
-  local cursorPosX, cursorPosY = screen.getCursorPos()
-  if stringLastLine then
-    cursorPosY = cursorPosY - 1
+--Waits for a matching event from args, every other event is ignored.
+--Cannot be terminated but can catch terminate event
+function CGBCoreLib.pullEventList(...)
+  local eventMatch = false
+  repeat
+    event={os.pullEventRaw()}
+    for _, eventListed in pairs({...}) do
+      if event[1] == eventListed then
+        eventMatch = true
+        break
+      end
+    end
+  until eventMatch
+  return table.unpack(event)
+end
+    
+function CGBCoreLib.getNetworkStorage(...)
+  local networkStorage = {
+    totalSlots = 0,
+    usedSlots = 0,
+    freeSlots = 0
+  }
+  local storage = CGBCoreLib.listPeripheralsByName(...)
+  for _, networkName in pairs(storage) do
+    local used = #peripheral.call(networkName,"list")
+    local total = peripheral.call(networkName,"size")
+    local free = total - used
+    networkStorage.totalSlots = networkStorage.totalSlots + total
+    networkStorage.usedSlots = networkStorage.usedSlots + used
+    networkStorage.freeSlots = networkStorage.freeSlots + free
+    networkStorage.devices = #storage
   end
-  if stringAlignTo == "left" then
-    screen.setCursorPos(cursorPosX,cursorPosY)  
-  elseif stringAlignTo == "center" then
-    screen.setCursorPos(midpoint,cursorPosY)
-  elseif stringAlignTo == "right" then
-    screen.setCursorPos(right,cursorPosY)
-  else
-    error("alignText: Bad argument #3: expected left, center or right!")
-  end
-  screen.write(stringText)
+  networkStorage.percentUsed = math.floor((networkStorage.usedSlots / networkStorage.totalSlots)*100)
+  return networkStorage
 end
