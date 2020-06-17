@@ -139,6 +139,9 @@ end
 local colorNamesList = CGBCoreLib.getColorNames()
 
 function CGBCoreLib.loadConfig(configFileName)
+  if not fs.exists(configFileName) then
+    return false
+  end
   local file = fs.open(configFileName, "r")
   local fData = file.readAll()
   local config = textutils.unserialize(fData)
