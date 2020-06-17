@@ -513,21 +513,62 @@ function CGBCoreLib.pullEventList(...)
 end
     
 function CGBCoreLib.getNetworkStorage(...)
+  local itemRawName = "" --make name local to the function only
+  local itemCounts = {}
   local networkStorage = {
     totalSlots = 0,
     usedSlots = 0,
-    freeSlots = 0
+    freeSlots = 0,
+    items = {}
   }
   local storage = CGBCoreLib.listPeripheralsByName(...)
   for _, networkName in pairs(storage) do
-    local used = #peripheral.call(networkName,"list")
+    local deviceData = peripheral.call(networkName,"list")
+    local used = #deviceData
     local total = peripheral.call(networkName,"size")
     local free = total - used
     networkStorage.totalSlots = networkStorage.totalSlots + total
     networkStorage.usedSlots = networkStorage.usedSlots + used
     networkStorage.freeSlots = networkStorage.freeSlots + free
     networkStorage.devices = #storage
+    networkStorage.items[networkName] = {}
+    for slot, item in pairs(deviceData) do
+      local itemDataRaw = peripheral.call(networkName,"getItemMeta",slot)
+      if itemDataRaw and not networkStorage.items[itemDataRaw.rawName] then
+        itemRawName = itemDataRaw.rawName
+        itemCount = itemDataRaw.count
+        itemCounts[itemRawName] = 0
+        itemDataRaw.count = nil
+        itemDataRaw.networkCount = 0
+        networkStorage.items[itemRawName] = {
+          data = itemDataRaw,
+          locations = {},
+        }
+      end
+      itemCounts[itemRawName] = itemCounts[itemRawName] + itemCount
+      networkStorage.items[itemRawName].data.networkCount = itemCounts[itemRawName]
+      if not networkStorage.items[itemRawName].locations[networkName] then
+        networkStorage.items[itemRawName].locations[networkName]={}
+      end
+      networkStorage.items[itemRawName].locations[networkName][slot]={}
+      networkStorage.items[itemRawName].locations[networkName][slot].networkCount= itemCount
+    end
   end
   networkStorage.percentUsed = math.floor((networkStorage.usedSlots / networkStorage.totalSlots)*100)
   return networkStorage
+end
+
+--returns amountmoves and slot of destination chest where item should be
+function CGBCoreLib.moveItem(stringToNetworkName,stringFromNetworkName,numFromSlot,numAmount)
+  local preMove = peripheral.call(stringToNetworkName,"list")
+  local amountMoved = (peripheral.call(stringFromNetworkName,"pushItems",stringToNetworkName,numFromSlot,numAmount)) or (peripheral.call(stringFromNetworkName,"pushItems",stringToNetworkName,numFromSlot))
+  local postMove = peripheral.call(stringToNetworkName,"list")
+  for slot,item in pairs(postMove) do
+    for param,val in pairs(item) do
+      if (not preMove[slot][param]) or (val ~= preMove[slot][param]) then
+        return amountMoved, slot
+      end
+    end
+  end
+  return false
 end
