@@ -30,6 +30,10 @@ FEATURES:
 -Works with anything containing "_ore" in the tooltip. This should mean that this allows processing of Nether Ore mod ores.
 NOTE: Please keep in mind that for Tinkers Construct. Not all ores can be processed.
 So please consult your furnace recipe list (NEI, JEI, etc) before inserting any ores into a NAFA controlled storage device as this can block up your furnaces.
+
+To Do:
+-Purge Mode
+-Auto ingredient rate detection based on fuel
 ]]
 
 --VARS
@@ -131,6 +135,8 @@ local function getChestInfo()
   return meta
 end
 
+local purgeMode = false
+
 
 local function main()
   while true do
@@ -145,7 +151,6 @@ local function main()
     CGBCoreLib.saveConfig("storage.lua",storage)
     --Get item info from all storage.
     data = getChestInfo()
-    
     --Statuses
     if not storage[1] then
       CGBCoreLib.colorPrint("red","STATUS: No Storage found!")
@@ -157,6 +162,36 @@ local function main()
       CGBCoreLib.colorPrint("green","STATUS: OK!")
       CGBCoreLib.colorPrint("green","Fuel rate: " .. furnaceFuelRate .. " per refuel.")
       CGBCoreLib.colorPrint("green","Ingredient rate: " .. furnaceIngredientsRate .. " per refill.")
+    end
+    
+    --Purge needs to take over program without losing peripheral handling.
+    while purgeMode do
+      local status
+      local key
+      print("Note: This will purge all furnaces of ingredients and fuel, would you like to continue? Y N")
+      key = CGBCoreLib.getKeyPressYN()
+      if key == keys.y then
+        print("Purging, please wait")
+        print("Complete: ")
+        for furnaceID, furnace in pairs(furnaces) do
+          local ok,furnaceList = pcall(peripheral.call,furnace,"list")
+          for _, chest in pairs(storage) do
+            for slot,item in pairs(furnaceList) do
+              peripheral.call(furnace,"pushItems",chest,slot)
+            end
+            status = math.floor((furnaceID / #furnaces) * 100)
+            posx, posy = term.getCursorPos()
+            term.clearLine(posy - 1)
+            term.setCursorPos(1, posy - 1)
+            print("Complete: %" .. status)
+          end
+        end
+        print("Done, Please check your chests, remove any unwanted items and then come back here and press any key to resume NAFA")
+        os.pullEvent("key")
+        purgeMode = false
+      elseif key == keys.n then
+        purgeMode = false
+      end
     end
     
     --Main operation code
@@ -264,6 +299,10 @@ local function secondary()
       if peripheral.getType(event[2]) == "furnace" then
         table.insert(furnaces, #furnaces + 1, event[2])
       end
+    elseif event[1] == "key" and event[2] == keys.p then
+      purgeMode = true
+      --Make purge mode immediately available by forcing parallel to restart
+      return
     end
   end
 end
