@@ -189,7 +189,7 @@ local function main()
         print("Done, Please check your chests, remove any unwanted items and then come back here and press any key to resume NAFA")
         os.pullEvent("key")
         purgeMode = false
-        return --make nafa restart immediately by force restarting parallel
+        return --make NAFA restart immediately by force restarting parallel
       elseif key == keys.n then
         purgeMode = false
         return
