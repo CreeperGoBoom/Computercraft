@@ -27,23 +27,24 @@ FEATURES:
 -On the fly configuration, just add and remove furnaces, chests, shulkers etc as desired.
 -Works with anything containing "chest" or "shulker" in the name, this means that iron chest mod chests and shulker boxes will work without any interaction. Add your own custom names below.
 -Also works with anything containing "furnace" or custom
-
+-Works with anything containing "_ore" in the tooltip. This should mean that this allows processing of Nether Ore mod ores.
+NOTE: Please keep in mind that for Tinkers Construct. Not all ores can be processed.
+So please consult your furnace recipe list (NEI, JEI, etc) before inserting any ores into a NAFA controlled storage device.
 ]]
 
 --VARS
-local version = "V1.3"
+local version = "V1.4"
 local furnaceFuelRate = 1  --How much fuel will be placed into the furnaces when empty?
 local furnaceIngredientsRate = 8  --How many ingredients to send to furnaces at one time?
 local ingredients = {
   "minecraft:cobblestone", 
   "minecraft:sand", 
-  "minecraft:iron_ore", 
-  "minecraft:gold_ore", 
-  "minecraft:log", 
+  "_ore", 
+  "log", 
 }
 
 local fuels = {
-  "minecraft:coal", 
+  "coal", 
   --"minecraft:sapling",
 }
 local idprint = false   --saves all item data from chests into file idprint.lua
@@ -97,6 +98,11 @@ for _ , func in pairs(requiredAPIFuncs) do --For API checking to ensure not outd
       os.reboot()
     end
   end
+end
+
+if not fs.exists("NAFA.txt") then
+  f = fs.open("NAFA.txt","w")
+  f.close()
 end
 
 local furnaces
@@ -168,7 +174,7 @@ local function main()
       for chestName , chestContents in pairs(data) do --Check each chest and
         for slot , item in pairs(chestContents) do --process each slot
           for _ , fuel in pairs(fuels) do
-            if item.name == fuel then
+            if item.name:find(fuel) then
               processList.fuels[count.fuel]={}
               processList.fuels[count.fuel].chestName=chestName
               processList.fuels[count.fuel].slot=slot
@@ -176,7 +182,7 @@ local function main()
             end
           end
           for _ , ingredient in pairs(ingredients) do
-            if item.name == ingredient then
+            if item.name:find(ingredient) then
               processList.ingredients[count.ingredients]={}
               processList.ingredients[count.ingredients].chestName=chestName
               processList.ingredients[count.ingredients].slot=slot
