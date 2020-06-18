@@ -30,9 +30,9 @@ FEATURES:
 -Works with anything containing "_ore" in the tooltip. This should mean that this allows processing of Nether Ore mod ores.
 NOTE: Please keep in mind that for Tinkers Construct. Not all ores can be processed.
 So please consult your furnace recipe list (NEI, JEI, etc) before inserting any ores into a NAFA controlled storage device as this can block up your furnaces.
+-Purge Mode. press P at any time for purge mode. This will purge all furnace contents to storage so you can see what potentially blocked the furnaces.
 
 To Do:
--Purge Mode
 -Auto ingredient rate detection based on fuel
 ]]
 
