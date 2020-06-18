@@ -171,7 +171,7 @@ local function main()
       print("Note: This will purge all furnace contents to storage, would you like to continue? Y N")
       key = CGBCoreLib.getKeyPressYN()
       if key == keys.y then
-        print("Purging, please wait")
+        print("Purging, please wait.")
         print("Complete: ")
         for furnaceID, furnace in pairs(furnaces) do
           local ok,furnaceList = pcall(peripheral.call,furnace,"list")
