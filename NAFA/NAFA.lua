@@ -168,7 +168,7 @@ local function main()
     while purgeMode do
       local status
       local key
-      print("Note: This will purge all furnaces of ingredients and fuel, would you like to continue? Y N")
+      print("Note: This will purge all furnace contents to storage, would you like to continue? Y N")
       key = CGBCoreLib.getKeyPressYN()
       if key == keys.y then
         print("Purging, please wait")
@@ -189,8 +189,10 @@ local function main()
         print("Done, Please check your chests, remove any unwanted items and then come back here and press any key to resume NAFA")
         os.pullEvent("key")
         purgeMode = false
+        return --make nafa restart immediately by force restarting parallel
       elseif key == keys.n then
         purgeMode = false
+        return
       end
     end
     
