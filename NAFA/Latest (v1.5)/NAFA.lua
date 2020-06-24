@@ -31,13 +31,18 @@ FEATURES:
 NOTE: Please keep in mind that for Tinkers Construct. Not all ores can be processed.
 So please consult your furnace recipe list (NEI, JEI, etc) before inserting any ores into a NAFA controlled storage device as this can block up your furnaces.
 -Purge Mode. press P at any time for purge mode. This will purge all furnace contents to storage so you can see what potentially blocked the furnaces.
+-Works hand in hand with other NAFA units connected to the same network to increase efficiency.
+--BUG: This also increases the chance of double (or x how many Nafa units) the required ingredients being sent by approx %30 per additional unit. Reccommended for setups with more than 50 furnaces. To be safe, no less than 50 furnaces to each NAFA controller.
+--BUG: This also has a chance of "taking over" for other units. making each unit randomly show that storage is full as they consequently report nothing moved. 
+When this happens however it seems to cancel out the double input. Which means that double input is temporary only. 
+Currently considering wether this is worth fixing as the effects are highly negatable unless non semi auto ingredient input rate is set higher than the reccommended 8. in which case please let me know via Github with a reasonable comment.
 
 To Do:
 -Auto ingredient rate detection based on fuel
 ]]
 
 --VARS
-local version = "V1.4"
+local version = "V1.5"  --Do not change.
 local furnaceFuelRate = 1  --How much fuel will be placed into the furnaces when empty?
 local furnaceIngredientsRate = 8  --How many ingredients to send to furnaces at one time?
 local ingredients = {
@@ -48,7 +53,8 @@ local ingredients = {
 }
 
 local fuels = {
-  "coal", 
+  "lava",
+  "coal",
   --"minecraft:sapling",
 }
 local idprint = false   --saves all item data from chests into file idprint.lua
@@ -138,8 +144,45 @@ end
 local purgeMode = false
 
 
+--Why not give it a slight comical approach.
+local purgeMessages = {
+  "Purging, Please wait.",
+  "Sending in the minions! stand by.",
+  "Cleaning out the chimneys, whatch out for dust!",
+  "Uhh nope, *throws something randomly at a chest*",
+  "Barf! Baarff!! *whimper*",
+  "Brrrr...MEOW!!",
+  "*Crash!*",
+}
+
+local custom = {
+  furnaceFuelRate = furnaceFuelRate,
+  furnaceIngredientsRate = furnaceIngredientsRate,
+  ingredients = ingredients,
+  fuels = fuels,
+  idprint = idprint,
+  storageTypes = storageTypes,
+  furnaceTypes = furnaceTypes,
+  purgeMessages = purgeMessages
+}
+  
+local chestsFull = false
+
 local function main()
   while true do
+    if not fs.exists("data/nafa/custom.lua") then
+      CGBCoreLib.saveConfig("data/nafa/custom.lua",custom)
+    elseif fs.exists("data/nafa/custom.lua") then
+      custom = (CGBCoreLib.loadConfig("data/nafa/custom.lua")) or (error("Malformed custom.lua, Please correct and try again."))
+      furnaceFuelRate = custom.furnaceFuelRate
+      furnaceIngredientsRate = custom.furnaceIngredientsRate
+      ingredients = custom.ingredients
+      fuels = custom.fuels
+      idprint = custom.idprint
+      storageTypes = custom.storageTypes
+      furnaceTypes = custom.furnaceTypes
+      purgeMessages = custom.purgeMessages
+    end
     term.clear()
     term.setCursorPos(1, 1)
     CGBCoreLib.colorPrint("orange","NAFA " .. version .. " (Not Another Furnace Automater)")
@@ -152,7 +195,9 @@ local function main()
     --Get item info from all storage.
     data = getChestInfo()
     --Statuses
-    if not storage[1] then
+    if chestsFull then
+      CGBCoreLib.colorPrint("red", "STATUS: Paused. Reason: Storage full! please upgrade.")
+    elseif not storage[1] then
       CGBCoreLib.colorPrint("red","STATUS: No Storage found!")
       sleep(5)
     elseif not furnaces[1] then
@@ -161,29 +206,36 @@ local function main()
     elseif storage[1] and furnaces[1] then
       CGBCoreLib.colorPrint("green","STATUS: OK!")
       CGBCoreLib.colorPrint("green","Fuel rate: " .. furnaceFuelRate .. " per refuel.")
-      CGBCoreLib.colorPrint("green","Ingredient rate: " .. furnaceIngredientsRate .. " per refill.")
+      CGBCoreLib.colorPrint("green","Ingredient rate: SEMI AUTO or " .. furnaceIngredientsRate .. " per refill.")
     end
     
     --Purge needs to take over program without losing peripheral handling.
     while purgeMode do
       local status
       local key
+      print("Purge Mode activated.")
       print("Note: This will purge all furnace contents to storage, would you like to continue? Y N")
       key = CGBCoreLib.getKeyPressYN()
       if key == keys.y then
-        print("Purging, please wait.")
+        
+        print(purgeMessages[math.random(1,#purgeMessages)])
         print("Complete: ")
         for furnaceID, furnace in pairs(furnaces) do
-          local ok,furnaceList = pcall(peripheral.call,furnace,"list")
-          for _, chest in pairs(storage) do
-            for slot,item in pairs(furnaceList) do
-              peripheral.call(furnace,"pushItems",chest,slot)
+          local success = pcall( function()
+            local ok,furnaceList = pcall(peripheral.call,furnace,"list")
+            for _, chest in pairs(storage) do
+              for slot,item in pairs(furnaceList) do
+                peripheral.call(furnace,"pushItems",chest,slot)
+              end
+              status = math.floor((furnaceID / #furnaces) * 100)
+              posx, posy = term.getCursorPos()
+              term.clearLine(posy - 1)
+              term.setCursorPos(1, posy - 1)
+              print("Complete: %" .. status)
             end
-            status = math.floor((furnaceID / #furnaces) * 100)
-            posx, posy = term.getCursorPos()
-            term.clearLine(posy - 1)
-            term.setCursorPos(1, posy - 1)
-            print("Complete: %" .. status)
+          end)
+          if not success then
+            table.remove(furnaces,furnaceID)
           end
         end
         print("Done, Please check your chests, remove any unwanted items and then come back here and press any key to resume NAFA")
@@ -215,6 +267,7 @@ local function main()
               processList.fuels[count.fuel]={}
               processList.fuels[count.fuel].chestName=chestName
               processList.fuels[count.fuel].slot=slot
+              processList.fuels[count.fuel].count=item.count
               count.fuel = count.fuel + 1
             end
           end
@@ -235,34 +288,57 @@ local function main()
         local success  = pcall(function ()   
           furnaceContents = peripheral.call(furnace, "list")
           --[[Basic order of operation here:
-                  1.Check if theres any output to push to chests.
-                  No point checking fuel levels or ingredients if furnace output is full.
-                  This allows other furnaces to be used in this case.
-                  
-                  2.Check fuel.
-                  Refuel if needed.
-                  
-                  3.Check that ingredients slot is empty.
+              Nafa works in cycles, completing one operation per furnace as below.
+              This seems more stable and efficient than each if being its own block.
+              1.Check if theres any output to push to chests.
+              No point checking fuel levels or ingredients if furnace output is full.
+              This allows other furnaces to be used in this case.
+              
+              Else 2.Check fuel.
+              Refuel if needed.
+              
+              Else 3.Check that ingredients slot is empty.
               Send new lot of ingredients as per vars at top.]]
-          if furnaceContents[3] and furnaceContents[3].count then --only pushes items out if theres something there else it wont call it, makes it more plethora friendly.
+          if furnaceContents[3] then --only pushes items out if theres something there else it wont call it, makes it more plethora friendly.
             -- If there is output available then attempt push to each chest until push successful. No point processing any more if chests are full.
             for i = 1, #storage do
-              if pcall(peripheral.call,furnace, "pushItems", storage[i], 3, furnaceContents[3].count) then
+              if peripheral.call(furnace, "pushItems", storage[i], 3, furnaceContents[3].count) > 0 then --a pcall is buggy due to minecraft:chests
+              -- Something was moved, reenable OK status if showing storage full
+                if chestsFull then 
+                  chestsFull = false 
+                end
+                break
+              end
+              --Nothing was moved, show Storage Full Status.
+              chestsFull = true
+            end
+          elseif furnaceContents[2] and furnaceContents[2].name == "minecraft:bucket" then
+            for _ , chest in pairs(storage) do
+              if pcall(peripheral.call,furnace,"pushItems",chest, 2, 1) then
                 break
               end
             end
           -- Refuel
-          elseif not (furnaceContents[2] and furnaceContents[2].count) then
+          elseif not furnaceContents[2] then
             for i = 1, #processList.fuels do
               if pcall(peripheral.call,processList.fuels[i].chestName, "pushItems", furnace, processList.fuels[i].slot, furnaceFuelRate, 2) then
                 break 
               end
             end
           -- Refill ingredients
-          elseif not (furnaceContents[1] and furnaceContents[1].count) then
-            for i = 1, #processList.ingredients do
-              if pcall(peripheral.call,processList.ingredients[i].chestName, "pushItems", furnace, processList.ingredients[i].slot, furnaceIngredientsRate, 1) then
-                break 
+          elseif not furnaceContents[1] then
+            local remainingBurnTime = math.floor(peripheral.call(furnace,"getRemainingBurnTime") / 200)
+            if remainingBurnTime > 0 then
+              for i = 1, #processList.ingredients do
+                if pcall(peripheral.call,processList.ingredients[i].chestName, "pushItems",furnace, processList.ingredients[i].slot, remainingBurnTime, 1) then
+                  break
+                end
+              end
+            elseif remainingBurnTime == 0 then
+              for i = 1, #processList.ingredients do
+                if pcall(peripheral.call,processList.ingredients[i].chestName, "pushItems", furnace, processList.ingredients[i].slot, furnaceIngredientsRate, 1) then
+                  break 
+                end
               end
             end
           end
