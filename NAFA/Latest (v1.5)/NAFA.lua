@@ -93,7 +93,7 @@ local function httpGet(stringURL, stringFileNameToSaveTo)
 end
 
 if not fs.exists("apis/CGBCoreLib.lua") then
-  if not httpGet("https://pastebin.com/raw/xuMVS2GP", "apis/CGBCoreLib.lua") then
+  if not httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/apis/CGBCoreLib.lua", "apis/CGBCoreLib.lua") then
     error("Error: Dependancy 'CGBCoreLib' could not be downloaded. Please connect your internet and restart")
   end
 end
