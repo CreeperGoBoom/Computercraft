@@ -41,6 +41,8 @@ To Do:
 -Auto ingredient rate detection based on fuel
 ]]
 
+local tArgs = {...}
+
 --VARS
 local version = "V1.5"  --Do not change.
 local furnaceFuelRate = 1  --How much fuel will be placed into the furnaces when empty?
@@ -113,6 +115,12 @@ end
 if not fs.exists("NAFA.txt") then
   f = fs.open("NAFA.txt","w")
   f.close()
+end
+
+if tArgs[1] = "update" then
+  print("Updating...")
+  httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/NAFA/Latest%20(v1.5)/NAFA.lua", "startup")
+  os.reboot()
 end
 
 local furnaces
