@@ -119,7 +119,7 @@ end
 
 if tArgs[1] = "update" then
   print("Updating...")
-  httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/NAFA/Latest%20(v1.5)/NAFA.lua", "startup")
+  httpGet("https://raw.githubusercontent.com/CreeperGoBoom/Computercraft/Latest/NAFA/Latest%20(v1.5)/NAFA.lua", "startup.lua")
   os.reboot()
 end
 
